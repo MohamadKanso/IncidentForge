@@ -1,0 +1,122 @@
+[
+  {
+    "duration_ms": 247,
+    "operation": "handle_request",
+    "parent_span_id": null,
+    "service": "payments-consumer",
+    "span_id": "span-0-0",
+    "status": "OK",
+    "timestamp": "2026-01-15T11:55:00+00:00",
+    "trace_id": "e75b1bd6b95d2661"
+  },
+  {
+    "duration_ms": 109,
+    "operation": "dependency_call",
+    "parent_span_id": "span-0-0",
+    "service": "schema-registry",
+    "span_id": "span-0-1",
+    "status": "OK",
+    "timestamp": "2026-01-15T11:55:01+00:00",
+    "trace_id": "e75b1bd6b95d2661"
+  },
+  {
+    "duration_ms": 210,
+    "operation": "handle_request",
+    "parent_span_id": null,
+    "service": "payments-consumer",
+    "span_id": "span-1-0",
+    "status": "OK",
+    "timestamp": "2026-01-15T11:58:00+00:00",
+    "trace_id": "c1b63a053b8ef3fa"
+  },
+  {
+    "duration_ms": 110,
+    "operation": "dependency_call",
+    "parent_span_id": "span-1-0",
+    "service": "schema-registry",
+    "span_id": "span-1-1",
+    "status": "OK",
+    "timestamp": "2026-01-15T11:58:01+00:00",
+    "trace_id": "c1b63a053b8ef3fa"
+  },
+  {
+    "duration_ms": 391,
+    "operation": "handle_request",
+    "parent_span_id": null,
+    "service": "payments-consumer",
+    "span_id": "span-2-0",
+    "status": "OK",
+    "timestamp": "2026-01-15T12:01:00+00:00",
+    "trace_id": "bb972af85676aed4"
+  },
+  {
+    "duration_ms": 246,
+    "operation": "dependency_call",
+    "parent_span_id": "span-2-0",
+    "service": "schema-registry",
+    "span_id": "span-2-1",
+    "status": "OK",
+    "timestamp": "2026-01-15T12:01:01+00:00",
+    "trace_id": "bb972af85676aed4"
+  },
+  {
+    "duration_ms": 1338,
+    "operation": "handle_request",
+    "parent_span_id": null,
+    "service": "payments-consumer",
+    "span_id": "span-3-0",
+    "status": "ERROR",
+    "timestamp": "2026-01-15T12:04:00+00:00",
+    "trace_id": "3313e8257d6d451d"
+  },
+  {
+    "duration_ms": 607,
+    "operation": "dependency_call",
+    "parent_span_id": "span-3-0",
+    "service": "schema-registry",
+    "span_id": "span-3-1",
+    "status": "OK",
+    "timestamp": "2026-01-15T12:04:01+00:00",
+    "trace_id": "3313e8257d6d451d"
+  },
+  {
+    "duration_ms": 1366,
+    "operation": "handle_request",
+    "parent_span_id": null,
+    "service": "payments-consumer",
+    "span_id": "span-4-0",
+    "status": "ERROR",
+    "timestamp": "2026-01-15T12:07:00+00:00",
+    "trace_id": "f53f902c683b8124"
+  },
+  {
+    "duration_ms": 1024,
+    "operation": "dependency_call",
+    "parent_span_id": "span-4-0",
+    "service": "schema-registry",
+    "span_id": "span-4-1",
+    "status": "ERROR",
+    "timestamp": "2026-01-15T12:07:01+00:00",
+    "trace_id": "f53f902c683b8124"
+  },
+  {
+    "duration_ms": 2155,
+    "operation": "handle_request",
+    "parent_span_id": null,
+    "service": "payments-consumer",
+    "span_id": "span-5-0",
+    "status": "ERROR",
+    "timestamp": "2026-01-15T12:10:00+00:00",
+    "trace_id": "9d2f5a15eb8e4b3b"
+  },
+  {
+    "duration_ms": 1428,
+    "operation": "dependency_call",
+    "parent_span_id": "span-5-0",
+    "service": "schema-registry",
+    "span_id": "span-5-1",
+    "status": "ERROR",
+    "timestamp": "2026-01-15T12:10:01+00:00",
+    "trace_id": "9d2f5a15eb8e4b3b"
+  }
+]

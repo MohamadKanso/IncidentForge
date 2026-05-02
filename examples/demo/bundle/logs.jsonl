@@ -1,0 +1,21 @@
+{"evidence": "new schema", "level": "WARN", "message": "checkout.payment_authorized.v7 registered", "service": "schema-registry", "timestamp": "2026-01-15T11:55:00+00:00", "trace_id": "e75b1bd6b95d2661"}
+{"level": "WARN", "message": "request sample accepted", "service": "edge-router", "timestamp": "2026-01-15T11:56:00+00:00"}
+{"level": "INFO", "message": "A checkout-api deploy completed four minutes before the page fired.", "service": "change-feed", "timestamp": "2026-01-15T11:57:00+00:00", "why_not_root_cause": "The deploy only changed frontend validation and request volume stayed flat."}
+{"level": "INFO", "message": "rate limiter budget healthy", "service": "edge-router", "timestamp": "2026-01-15T11:57:00+00:00"}
+{"evidence": "SchemaRegistryDecodeError", "level": "WARN", "message": "first decode error", "service": "payments-consumer", "timestamp": "2026-01-15T11:59:00+00:00", "trace_id": "f53f902c683b8124"}
+{"level": "INFO", "message": "health check passed", "service": "edge-router", "timestamp": "2026-01-15T11:59:00+00:00"}
+{"level": "WARN", "message": "background refresh completed", "service": "payments-consumer", "timestamp": "2026-01-15T12:00:00+00:00"}
+{"level": "INFO", "message": "A Kafka broker leader election occurred earlier in the hour.", "service": "change-feed", "timestamp": "2026-01-15T12:01:00+00:00", "why_not_root_cause": "Partition ISR recovered before the lag spike and broker health is normal."}
+{"evidence": "consumer_lag_spike", "level": "WARN", "message": "lag crosses 10000 offsets", "service": "kafka", "timestamp": "2026-01-15T12:03:00+00:00", "trace_id": "2b6613e8ece32bba"}
+{"level": "INFO", "message": "health check passed", "service": "payments-consumer", "timestamp": "2026-01-15T12:03:00+00:00"}
+{"level": "ERROR", "message": "consumer_lag_spike: Lag rises from 180 to more than 52000 offsets after 10:08 UTC.", "query_hint": "sum(kafka_consumer_lag{group=\"payments-consumer\"})", "service": "payments-consumer", "source": "metrics", "timestamp": "2026-01-15T12:05:00+00:00"}
+{"level": "ERROR", "message": "stable_broker_cpu: Broker CPU remains below 42 percent, reducing broker saturation likelihood.", "query_hint": "avg(kafka_broker_cpu{cluster=\"orders-eu\"})", "service": "payments-consumer", "source": "metrics", "timestamp": "2026-01-15T12:07:00+00:00"}
+{"level": "INFO", "message": "health check passed", "service": "payments-consumer", "timestamp": "2026-01-15T12:08:00+00:00"}
+{"level": "WARN", "message": "background refresh completed", "service": "edge-router", "timestamp": "2026-01-15T12:08:00+00:00"}
+{"evidence": "payments delayed", "level": "ERROR", "message": "SEV2 alert triggered", "service": "pagerduty", "timestamp": "2026-01-15T12:09:00+00:00", "trace_id": "4175bba3e46d470d"}
+{"level": "ERROR", "message": "deserialize_errors: Decode errors repeat for checkout.payment_authorized.v7.", "query_hint": "service=\"payments-consumer\" \"SchemaRegistryDecodeError\"", "service": "payments-consumer", "source": "logs", "timestamp": "2026-01-15T12:11:00+00:00"}
+{"level": "INFO", "message": "health check passed", "service": "worker-pool", "timestamp": "2026-01-15T12:11:00+00:00"}
+{"level": "INFO", "message": "health check passed", "service": "edge-router", "timestamp": "2026-01-15T12:16:00+00:00"}
+{"level": "INFO", "message": "request sample accepted", "service": "payments-consumer", "timestamp": "2026-01-15T12:18:00+00:00"}
+{"level": "WARN", "message": "background refresh completed", "service": "edge-router", "timestamp": "2026-01-15T12:18:00+00:00"}
+{"level": "INFO", "message": "request sample accepted", "service": "worker-pool", "timestamp": "2026-01-15T12:24:00+00:00"}

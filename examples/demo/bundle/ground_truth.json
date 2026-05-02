@@ -1,0 +1,80 @@
+{
+  "evidence_terms": [
+    "consumer_lag_spike",
+    "deserialize_errors",
+    "stable_broker_cpu",
+    "Lag rises from 180 to more than 52000 offsets after 10:08 UTC.",
+    "Decode errors repeat for checkout.payment_authorized.v7.",
+    "Broker CPU remains below 42 percent, reducing broker saturation likelihood."
+  ],
+  "expected_signals": [
+    {
+      "expected": "Lag rises from 180 to more than 52000 offsets after 10:08 UTC.",
+      "name": "consumer_lag_spike",
+      "query": "sum(kafka_consumer_lag{group=\"payments-consumer\"})",
+      "source": "metrics",
+      "weight": 1.0
+    },
+    {
+      "expected": "Decode errors repeat for checkout.payment_authorized.v7.",
+      "name": "deserialize_errors",
+      "query": "service=\"payments-consumer\" \"SchemaRegistryDecodeError\"",
+      "source": "logs",
+      "weight": 1.0
+    },
+    {
+      "expected": "Broker CPU remains below 42 percent, reducing broker saturation likelihood.",
+      "name": "stable_broker_cpu",
+      "query": "avg(kafka_broker_cpu{cluster=\"orders-eu\"})",
+      "source": "metrics",
+      "weight": 1.0
+    }
+  ],
+  "impact": "Payment confirmation events are delayed by 18 to 24 minutes.",
+  "incident_id": "ifg-dc5e156218",
+  "red_herring_terms": [
+    "checkout-api deploy",
+    "frontend validation",
+    "leader election",
+    "broker outage"
+  ],
+  "red_herrings": [
+    {
+      "clue": "A checkout-api deploy completed four minutes before the page fired.",
+      "penalty_terms": [
+        "checkout-api deploy",
+        "frontend validation"
+      ],
+      "reason": "The deploy only changed frontend validation and request volume stayed flat.",
+      "weight": 1.0
+    },
+    {
+      "clue": "A Kafka broker leader election occurred earlier in the hour.",
+      "penalty_terms": [
+        "leader election",
+        "broker outage"
+      ],
+      "reason": "Partition ISR recovered before the lag spike and broker health is normal.",
+      "weight": 1.0
+    }
+  ],
+  "remediation_terms": [
+    "skip poison message",
+    "rollback schema",
+    "add dead letter queue",
+    "restart consumer",
+    "schema compatibility"
+  ],
+  "root_cause": "A backward-incompatible schema change introduced a poison message that repeatedly fails deserialization and stalls the payments consumer group.",
+  "root_cause_terms": [
+    "poison message",
+    "schema change",
+    "deserialization",
+    "payments consumer group",
+    "consumer lag"
+  ],
+  "scenario": "kafka-consumer-lag",
+  "schema_version": "incidentforge.ground_truth.v1",
+  "service": "payments-consumer",
+  "severity": "SEV2"
+}

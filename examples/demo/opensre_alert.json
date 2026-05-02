@@ -1,0 +1,24 @@
+{
+  "annotations": {
+    "bundle_manifest": "examples/demo/bundle/manifest.json",
+    "expected_root_cause": "A backward-incompatible schema change introduced a poison message that repeatedly fails deserialization and stalls the payments consumer group.",
+    "incidentforge_incident_id": "ifg-dc5e156218"
+  },
+  "description": "Checkout events are delayed because the payments consumer group is stuck behind a poison message after a schema change.",
+  "labels": {
+    "environment": "production",
+    "scenario": "kafka-consumer-lag",
+    "source": "incidentforge",
+    "team": "platform"
+  },
+  "links": {
+    "logs": "logs.jsonl",
+    "metrics": "metrics.csv",
+    "runbook": "runbook.md",
+    "traces": "traces.json"
+  },
+  "service": "payments-consumer",
+  "severity": "SEV2",
+  "source": "incidentforge",
+  "title": "Kafka Checkout Consumer Lag"
+}

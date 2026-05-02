@@ -1,0 +1,21 @@
+{
+  "incident_id": "ifg-dc5e156218",
+  "labels": {
+    "environment": "production",
+    "scenario": "kafka-consumer-lag",
+    "source": "incidentforge",
+    "team": "platform"
+  },
+  "links": {
+    "logs": "logs.jsonl",
+    "metrics": "metrics.csv",
+    "runbook": "runbook.md",
+    "traces": "traces.json"
+  },
+  "schema_version": "incidentforge.alert.v1",
+  "service": "payments-consumer",
+  "severity": "SEV2",
+  "started_at": "2026-01-15T11:55:00+00:00",
+  "summary": "Checkout events are delayed because the payments consumer group is stuck behind a poison message after a schema change.",
+  "title": "Kafka Checkout Consumer Lag"
+}

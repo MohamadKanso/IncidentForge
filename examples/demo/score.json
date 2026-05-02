@@ -1,0 +1,16 @@
+{
+  "evidence": 0.6667,
+  "missing_evidence": [
+    "stable_broker_cpu"
+  ],
+  "missing_remediation": [
+    "restart consumer",
+    "schema compatibility"
+  ],
+  "overall": 0.8307,
+  "red_herring_resistance": 1.0,
+  "remediation": 0.6,
+  "root_cause": 1.0,
+  "service_identification": 1.0,
+  "triggered_red_herrings": []
+}

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="320" viewBox="0 0 960 320" role="img" aria-labelledby="title desc">
+  <title id="title">IncidentForge mark</title>
+  <desc id="desc">A monochrome dot matrix mark with one red signal dot.</desc>
+  <rect width="960" height="320" fill="#050505"/>
+  <g fill="#f4f4f0">
+    <circle cx="80" cy="76" r="14"/>
+    <circle cx="124" cy="76" r="14"/>
+    <circle cx="168" cy="76" r="14"/>
+    <circle cx="80" cy="120" r="14"/>
+    <circle cx="80" cy="164" r="14"/>
+    <circle cx="124" cy="164" r="14"/>
+    <circle cx="168" cy="164" r="14"/>
+    <circle cx="80" cy="208" r="14"/>
+    <circle cx="80" cy="252" r="14"/>
+    <circle cx="168" cy="252" r="14"/>
+  </g>
+  <circle cx="168" cy="208" r="14" fill="#ff2a2a"/>
+  <g font-family="ui-monospace, SFMono-Regular, Consolas, monospace" fill="#f4f4f0">
+    <text x="240" y="150" font-size="72" font-weight="700">IncidentForge</text>
+    <text x="244" y="202" font-size="24" fill="#a7a7a0">synthetic incidents / RCA scoring / AI SRE benchmarks</text>
+  </g>
+  <g fill="#ffffff" opacity="0.14">
+    <circle cx="780" cy="80" r="5"/>
+    <circle cx="810" cy="80" r="5"/>
+    <circle cx="840" cy="80" r="5"/>
+    <circle cx="780" cy="110" r="5"/>
+    <circle cx="840" cy="110" r="5"/>
+    <circle cx="780" cy="140" r="5"/>
+    <circle cx="810" cy="140" r="5"/>
+    <circle cx="840" cy="140" r="5"/>
+    <circle cx="780" cy="170" r="5"/>
+    <circle cx="840" cy="170" r="5"/>
+    <circle cx="780" cy="200" r="5"/>
+    <circle cx="810" cy="200" r="5"/>
+    <circle cx="840" cy="200" r="5"/>
+  </g>
+</svg>
+

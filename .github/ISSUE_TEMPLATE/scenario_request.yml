@@ -1,0 +1,27 @@
+name: Scenario request
+description: Suggest a new synthetic production incident.
+title: "[scenario] "
+labels: ["scenario"]
+body:
+  - type: input
+    id: system
+    attributes:
+      label: System
+      placeholder: Kafka, Postgres, Airflow, Redis, Kubernetes
+    validations:
+      required: true
+  - type: textarea
+    id: root_cause
+    attributes:
+      label: Root cause
+      description: What should the investigator discover?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Metrics, logs, traces, or runbook clues that should be present.
+    validations:
+      required: true
+
