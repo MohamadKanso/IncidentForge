@@ -8,6 +8,10 @@
   <img alt="Python" src="https://img.shields.io/badge/python-3.10+-ff2a2a?style=for-the-badge">
 </p>
 
+<p align="center">
+  <a href="https://mohamadkanso.github.io/IncidentForge/"><strong>Try the live RCA evaluation lab →</strong></a>
+</p>
+
 # IncidentForge
 
 IncidentForge is an open-source toolkit for generating synthetic production incidents
@@ -20,6 +24,10 @@ red-herring resistance.
 
 The visual system uses a monochrome, dot-matrix, transparent-panel aesthetic inspired
 by industrial product interfaces. It is not affiliated with Nothing Technology Ltd.
+
+The browser lab needs no installation. Pick one of the four real built-in scenarios,
+inspect its generated metrics, logs, traces, alert, and runbook, then write an RCA and
+run the same transparent scoring contract used by the Python package.
 
 <p align="center">
   <img src="docs/assets/report-preview.png" alt="IncidentForge generated RCA report" width="880">

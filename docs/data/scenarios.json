@@ -1,0 +1,4530 @@
+[
+  {
+    "definition": {
+      "slug": "kafka-consumer-lag",
+      "title": "Kafka Checkout Consumer Lag",
+      "summary": "Checkout events are delayed because the payments consumer group is stuck behind a poison message after a schema change.",
+      "severity": "SEV2",
+      "service": "payments-consumer",
+      "root_cause": "A backward-incompatible schema change introduced a poison message that repeatedly fails deserialization and stalls the payments consumer group.",
+      "root_cause_terms": [
+        "poison message",
+        "schema change",
+        "deserialization",
+        "payments consumer group",
+        "consumer lag"
+      ],
+      "impact": "Payment confirmation events are delayed by 18 to 24 minutes.",
+      "signals": [
+        {
+          "name": "consumer_lag_spike",
+          "source": "metrics",
+          "query": "sum(kafka_consumer_lag{group=\"payments-consumer\"})",
+          "expected": "Lag rises from 180 to more than 52000 offsets after 10:08 UTC.",
+          "weight": 1.0
+        },
+        {
+          "name": "deserialize_errors",
+          "source": "logs",
+          "query": "service=\"payments-consumer\" \"SchemaRegistryDecodeError\"",
+          "expected": "Decode errors repeat for checkout.payment_authorized.v7.",
+          "weight": 1.0
+        },
+        {
+          "name": "stable_broker_cpu",
+          "source": "metrics",
+          "query": "avg(kafka_broker_cpu{cluster=\"orders-eu\"})",
+          "expected": "Broker CPU remains below 42 percent, reducing broker saturation likelihood.",
+          "weight": 1.0
+        }
+      ],
+      "red_herrings": [
+        {
+          "clue": "A checkout-api deploy completed four minutes before the page fired.",
+          "reason": "The deploy only changed frontend validation and request volume stayed flat.",
+          "penalty_terms": [
+            "checkout-api deploy",
+            "frontend validation"
+          ],
+          "weight": 1.0
+        },
+        {
+          "clue": "A Kafka broker leader election occurred earlier in the hour.",
+          "reason": "Partition ISR recovered before the lag spike and broker health is normal.",
+          "penalty_terms": [
+            "leader election",
+            "broker outage"
+          ],
+          "weight": 1.0
+        }
+      ],
+      "remediation_terms": [
+        "skip poison message",
+        "rollback schema",
+        "add dead letter queue",
+        "restart consumer",
+        "schema compatibility"
+      ],
+      "timeline": [
+        {
+          "minute": 0,
+          "service": "schema-registry",
+          "event": "checkout.payment_authorized.v7 registered",
+          "evidence": "new schema"
+        },
+        {
+          "minute": 4,
+          "service": "payments-consumer",
+          "event": "first decode error",
+          "evidence": "SchemaRegistryDecodeError"
+        },
+        {
+          "minute": 8,
+          "service": "kafka",
+          "event": "lag crosses 10000 offsets",
+          "evidence": "consumer_lag_spike"
+        },
+        {
+          "minute": 14,
+          "service": "pagerduty",
+          "event": "SEV2 alert triggered",
+          "evidence": "payments delayed"
+        }
+      ],
+      "runbook": "Check consumer lag by group, inspect failed offsets, compare schema registry versions, and quarantine poison messages before restarting the consumer.",
+      "tags": [
+        "kafka",
+        "schema-registry",
+        "payments",
+        "observability"
+      ]
+    },
+    "manifest": {
+      "schema_version": "incidentforge.bundle.v1",
+      "incident_id": "ifg-b9a03d871e",
+      "scenario": "kafka-consumer-lag",
+      "title": "Kafka Checkout Consumer Lag",
+      "seed": 8,
+      "started_at": "2026-01-15T10:58:00+00:00",
+      "files": {
+        "alert": "alert.json",
+        "metrics": "metrics.csv",
+        "logs": "logs.jsonl",
+        "traces": "traces.json",
+        "runbook": "runbook.md",
+        "ground_truth": "ground_truth.json",
+        "ground_truth_yaml": "ground_truth.yaml"
+      }
+    },
+    "alert": {
+      "schema_version": "incidentforge.alert.v1",
+      "incident_id": "ifg-b9a03d871e",
+      "title": "Kafka Checkout Consumer Lag",
+      "severity": "SEV2",
+      "service": "payments-consumer",
+      "summary": "Checkout events are delayed because the payments consumer group is stuck behind a poison message after a schema change.",
+      "started_at": "2026-01-15T10:58:00+00:00",
+      "labels": {
+        "team": "platform",
+        "environment": "production",
+        "scenario": "kafka-consumer-lag",
+        "source": "incidentforge"
+      },
+      "links": {
+        "runbook": "runbook.md",
+        "metrics": "metrics.csv",
+        "logs": "logs.jsonl",
+        "traces": "traces.json"
+      }
+    },
+    "metrics": [
+      {
+        "timestamp": "2026-01-15T10:58:00+00:00",
+        "metric": "service_error_rate",
+        "service": "payments-consumer",
+        "value": 0.01,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T10:58:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "payments-consumer",
+        "value": 180,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T10:58:00+00:00",
+        "metric": "consumer_lag_spike",
+        "service": "payments-consumer",
+        "value": 10.58,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T10:58:00+00:00",
+        "metric": "deserialize_errors",
+        "service": "payments-consumer",
+        "value": 15.26,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T10:58:00+00:00",
+        "metric": "stable_broker_cpu",
+        "service": "payments-consumer",
+        "value": 22.43,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:00:00+00:00",
+        "metric": "service_error_rate",
+        "service": "payments-consumer",
+        "value": 0.0225,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:00:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "payments-consumer",
+        "value": 802,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:00:00+00:00",
+        "metric": "consumer_lag_spike",
+        "service": "payments-consumer",
+        "value": 30.34,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:00:00+00:00",
+        "metric": "deserialize_errors",
+        "service": "payments-consumer",
+        "value": 51.86,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:00:00+00:00",
+        "metric": "stable_broker_cpu",
+        "service": "payments-consumer",
+        "value": 75.34,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:02:00+00:00",
+        "metric": "service_error_rate",
+        "service": "payments-consumer",
+        "value": 0.041,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:02:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "payments-consumer",
+        "value": 1429,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:02:00+00:00",
+        "metric": "consumer_lag_spike",
+        "service": "payments-consumer",
+        "value": 34.21,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:02:00+00:00",
+        "metric": "deserialize_errors",
+        "service": "payments-consumer",
+        "value": 103.56,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:02:00+00:00",
+        "metric": "stable_broker_cpu",
+        "service": "payments-consumer",
+        "value": 107.06,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:04:00+00:00",
+        "metric": "service_error_rate",
+        "service": "payments-consumer",
+        "value": 0.0469,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:04:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "payments-consumer",
+        "value": 3616,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:04:00+00:00",
+        "metric": "consumer_lag_spike",
+        "service": "payments-consumer",
+        "value": 60.18,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:04:00+00:00",
+        "metric": "deserialize_errors",
+        "service": "payments-consumer",
+        "value": 138.78,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:04:00+00:00",
+        "metric": "stable_broker_cpu",
+        "service": "payments-consumer",
+        "value": 120.16,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:06:00+00:00",
+        "metric": "service_error_rate",
+        "service": "payments-consumer",
+        "value": 0.0699,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:06:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "payments-consumer",
+        "value": 1471,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:06:00+00:00",
+        "metric": "consumer_lag_spike",
+        "service": "payments-consumer",
+        "value": 92.17,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:06:00+00:00",
+        "metric": "deserialize_errors",
+        "service": "payments-consumer",
+        "value": 127.07,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:06:00+00:00",
+        "metric": "stable_broker_cpu",
+        "service": "payments-consumer",
+        "value": 237.21,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:08:00+00:00",
+        "metric": "service_error_rate",
+        "service": "payments-consumer",
+        "value": 0.0731,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:08:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "payments-consumer",
+        "value": 2306,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:08:00+00:00",
+        "metric": "consumer_lag_spike",
+        "service": "payments-consumer",
+        "value": 108.68,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:08:00+00:00",
+        "metric": "deserialize_errors",
+        "service": "payments-consumer",
+        "value": 211.44,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:08:00+00:00",
+        "metric": "stable_broker_cpu",
+        "service": "payments-consumer",
+        "value": 178.97,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:10:00+00:00",
+        "metric": "service_error_rate",
+        "service": "payments-consumer",
+        "value": 0.0712,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:10:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "payments-consumer",
+        "value": 6740,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:10:00+00:00",
+        "metric": "consumer_lag_spike",
+        "service": "payments-consumer",
+        "value": 126.87,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:10:00+00:00",
+        "metric": "deserialize_errors",
+        "service": "payments-consumer",
+        "value": 248.64,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:10:00+00:00",
+        "metric": "stable_broker_cpu",
+        "service": "payments-consumer",
+        "value": 282.67,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:12:00+00:00",
+        "metric": "service_error_rate",
+        "service": "payments-consumer",
+        "value": 0.1161,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:12:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "payments-consumer",
+        "value": 4721,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:12:00+00:00",
+        "metric": "consumer_lag_spike",
+        "service": "payments-consumer",
+        "value": 95.35,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:12:00+00:00",
+        "metric": "deserialize_errors",
+        "service": "payments-consumer",
+        "value": 288.29,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:12:00+00:00",
+        "metric": "stable_broker_cpu",
+        "service": "payments-consumer",
+        "value": 461.94,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:14:00+00:00",
+        "metric": "service_error_rate",
+        "service": "payments-consumer",
+        "value": 0.1014,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:14:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "payments-consumer",
+        "value": 7154,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:14:00+00:00",
+        "metric": "consumer_lag_spike",
+        "service": "payments-consumer",
+        "value": 154.51,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:14:00+00:00",
+        "metric": "deserialize_errors",
+        "service": "payments-consumer",
+        "value": 225.93,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:14:00+00:00",
+        "metric": "stable_broker_cpu",
+        "service": "payments-consumer",
+        "value": 396.59,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:16:00+00:00",
+        "metric": "service_error_rate",
+        "service": "payments-consumer",
+        "value": 0.1106,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:16:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "payments-consumer",
+        "value": 2465,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:16:00+00:00",
+        "metric": "consumer_lag_spike",
+        "service": "payments-consumer",
+        "value": 156.74,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:16:00+00:00",
+        "metric": "deserialize_errors",
+        "service": "payments-consumer",
+        "value": 313.66,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:16:00+00:00",
+        "metric": "stable_broker_cpu",
+        "service": "payments-consumer",
+        "value": 355.72,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:18:00+00:00",
+        "metric": "service_error_rate",
+        "service": "payments-consumer",
+        "value": 0.0977,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:18:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "payments-consumer",
+        "value": 3680,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:18:00+00:00",
+        "metric": "consumer_lag_spike",
+        "service": "payments-consumer",
+        "value": 124.1,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:18:00+00:00",
+        "metric": "deserialize_errors",
+        "service": "payments-consumer",
+        "value": 240.13,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:18:00+00:00",
+        "metric": "stable_broker_cpu",
+        "service": "payments-consumer",
+        "value": 532.67,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:20:00+00:00",
+        "metric": "service_error_rate",
+        "service": "payments-consumer",
+        "value": 0.0905,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:20:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "payments-consumer",
+        "value": 5126,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:20:00+00:00",
+        "metric": "consumer_lag_spike",
+        "service": "payments-consumer",
+        "value": 104.5,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:20:00+00:00",
+        "metric": "deserialize_errors",
+        "service": "payments-consumer",
+        "value": 345.56,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:20:00+00:00",
+        "metric": "stable_broker_cpu",
+        "service": "payments-consumer",
+        "value": 269.61,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:22:00+00:00",
+        "metric": "service_error_rate",
+        "service": "payments-consumer",
+        "value": 0.126,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:22:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "payments-consumer",
+        "value": 4337,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:22:00+00:00",
+        "metric": "consumer_lag_spike",
+        "service": "payments-consumer",
+        "value": 104.04,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:22:00+00:00",
+        "metric": "deserialize_errors",
+        "service": "payments-consumer",
+        "value": 370.14,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:22:00+00:00",
+        "metric": "stable_broker_cpu",
+        "service": "payments-consumer",
+        "value": 324.71,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:24:00+00:00",
+        "metric": "service_error_rate",
+        "service": "payments-consumer",
+        "value": 0.1343,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:24:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "payments-consumer",
+        "value": 3019,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:24:00+00:00",
+        "metric": "consumer_lag_spike",
+        "service": "payments-consumer",
+        "value": 143.69,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:24:00+00:00",
+        "metric": "deserialize_errors",
+        "service": "payments-consumer",
+        "value": 280.25,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:24:00+00:00",
+        "metric": "stable_broker_cpu",
+        "service": "payments-consumer",
+        "value": 485.21,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:26:00+00:00",
+        "metric": "service_error_rate",
+        "service": "payments-consumer",
+        "value": 0.123,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:26:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "payments-consumer",
+        "value": 2158,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:26:00+00:00",
+        "metric": "consumer_lag_spike",
+        "service": "payments-consumer",
+        "value": 101.99,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:26:00+00:00",
+        "metric": "deserialize_errors",
+        "service": "payments-consumer",
+        "value": 370.56,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:26:00+00:00",
+        "metric": "stable_broker_cpu",
+        "service": "payments-consumer",
+        "value": 398.46,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:28:00+00:00",
+        "metric": "service_error_rate",
+        "service": "payments-consumer",
+        "value": 0.1362,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:28:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "payments-consumer",
+        "value": 5879,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:28:00+00:00",
+        "metric": "consumer_lag_spike",
+        "service": "payments-consumer",
+        "value": 180.45,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:28:00+00:00",
+        "metric": "deserialize_errors",
+        "service": "payments-consumer",
+        "value": 329.19,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:28:00+00:00",
+        "metric": "stable_broker_cpu",
+        "service": "payments-consumer",
+        "value": 268.74,
+        "unit": "score",
+        "signal": "expected_evidence"
+      }
+    ],
+    "logs": [
+      {
+        "timestamp": "2026-01-15T10:58:00+00:00",
+        "level": "WARN",
+        "service": "schema-registry",
+        "message": "checkout.payment_authorized.v7 registered",
+        "evidence": "new schema",
+        "trace_id": "e75b1bd6b95d2661"
+      },
+      {
+        "timestamp": "2026-01-15T10:59:00+00:00",
+        "level": "INFO",
+        "service": "change-feed",
+        "message": "A Kafka broker leader election occurred earlier in the hour.",
+        "why_not_root_cause": "Partition ISR recovered before the lag spike and broker health is normal."
+      },
+      {
+        "timestamp": "2026-01-15T11:00:00+00:00",
+        "level": "INFO",
+        "service": "worker-pool",
+        "message": "request sample accepted"
+      },
+      {
+        "timestamp": "2026-01-15T11:01:00+00:00",
+        "level": "INFO",
+        "service": "worker-pool",
+        "message": "rate limiter budget healthy"
+      },
+      {
+        "timestamp": "2026-01-15T11:02:00+00:00",
+        "level": "WARN",
+        "service": "payments-consumer",
+        "message": "first decode error",
+        "evidence": "SchemaRegistryDecodeError",
+        "trace_id": "f53f902c683b8124"
+      },
+      {
+        "timestamp": "2026-01-15T11:04:00+00:00",
+        "level": "INFO",
+        "service": "worker-pool",
+        "message": "health check passed"
+      },
+      {
+        "timestamp": "2026-01-15T11:05:00+00:00",
+        "level": "INFO",
+        "service": "payments-consumer",
+        "message": "health check passed"
+      },
+      {
+        "timestamp": "2026-01-15T11:06:00+00:00",
+        "level": "WARN",
+        "service": "kafka",
+        "message": "lag crosses 10000 offsets",
+        "evidence": "consumer_lag_spike",
+        "trace_id": "2b6613e8ece32bba"
+      },
+      {
+        "timestamp": "2026-01-15T11:06:00+00:00",
+        "level": "ERROR",
+        "service": "payments-consumer",
+        "message": "consumer_lag_spike: Lag rises from 180 to more than 52000 offsets after 10:08 UTC.",
+        "query_hint": "sum(kafka_consumer_lag{group=\"payments-consumer\"})",
+        "source": "metrics"
+      },
+      {
+        "timestamp": "2026-01-15T11:07:00+00:00",
+        "level": "ERROR",
+        "service": "payments-consumer",
+        "message": "deserialize_errors: Decode errors repeat for checkout.payment_authorized.v7.",
+        "query_hint": "service=\"payments-consumer\" \"SchemaRegistryDecodeError\"",
+        "source": "logs"
+      },
+      {
+        "timestamp": "2026-01-15T11:07:00+00:00",
+        "level": "INFO",
+        "service": "change-feed",
+        "message": "A checkout-api deploy completed four minutes before the page fired.",
+        "why_not_root_cause": "The deploy only changed frontend validation and request volume stayed flat."
+      },
+      {
+        "timestamp": "2026-01-15T11:08:00+00:00",
+        "level": "INFO",
+        "service": "edge-router",
+        "message": "health check passed"
+      },
+      {
+        "timestamp": "2026-01-15T11:11:00+00:00",
+        "level": "ERROR",
+        "service": "payments-consumer",
+        "message": "stable_broker_cpu: Broker CPU remains below 42 percent, reducing broker saturation likelihood.",
+        "query_hint": "avg(kafka_broker_cpu{cluster=\"orders-eu\"})",
+        "source": "metrics"
+      },
+      {
+        "timestamp": "2026-01-15T11:12:00+00:00",
+        "level": "ERROR",
+        "service": "pagerduty",
+        "message": "SEV2 alert triggered",
+        "evidence": "payments delayed",
+        "trace_id": "4175bba3e46d470d"
+      },
+      {
+        "timestamp": "2026-01-15T11:13:00+00:00",
+        "level": "INFO",
+        "service": "payments-consumer",
+        "message": "rate limiter budget healthy"
+      },
+      {
+        "timestamp": "2026-01-15T11:14:00+00:00",
+        "level": "WARN",
+        "service": "payments-consumer",
+        "message": "rate limiter budget healthy"
+      },
+      {
+        "timestamp": "2026-01-15T11:16:00+00:00",
+        "level": "INFO",
+        "service": "edge-router",
+        "message": "rate limiter budget healthy"
+      },
+      {
+        "timestamp": "2026-01-15T11:18:00+00:00",
+        "level": "INFO",
+        "service": "worker-pool",
+        "message": "rate limiter budget healthy"
+      },
+      {
+        "timestamp": "2026-01-15T11:21:00+00:00",
+        "level": "INFO",
+        "service": "edge-router",
+        "message": "background refresh completed"
+      },
+      {
+        "timestamp": "2026-01-15T11:26:00+00:00",
+        "level": "WARN",
+        "service": "payments-consumer",
+        "message": "request sample accepted"
+      },
+      {
+        "timestamp": "2026-01-15T11:28:00+00:00",
+        "level": "INFO",
+        "service": "payments-consumer",
+        "message": "rate limiter budget healthy"
+      }
+    ],
+    "traces": [
+      {
+        "trace_id": "e75b1bd6b95d2661",
+        "span_id": "span-0-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T10:58:00+00:00",
+        "service": "payments-consumer",
+        "operation": "handle_request",
+        "duration_ms": 348,
+        "status": "OK"
+      },
+      {
+        "trace_id": "e75b1bd6b95d2661",
+        "span_id": "span-0-1",
+        "parent_span_id": "span-0-0",
+        "timestamp": "2026-01-15T10:58:01+00:00",
+        "service": "schema-registry",
+        "operation": "dependency_call",
+        "duration_ms": 160,
+        "status": "OK"
+      },
+      {
+        "trace_id": "c1b63a053b8ef3fa",
+        "span_id": "span-1-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T11:01:00+00:00",
+        "service": "payments-consumer",
+        "operation": "handle_request",
+        "duration_ms": 228,
+        "status": "OK"
+      },
+      {
+        "trace_id": "c1b63a053b8ef3fa",
+        "span_id": "span-1-1",
+        "parent_span_id": "span-1-0",
+        "timestamp": "2026-01-15T11:01:01+00:00",
+        "service": "schema-registry",
+        "operation": "dependency_call",
+        "duration_ms": 156,
+        "status": "OK"
+      },
+      {
+        "trace_id": "bb972af85676aed4",
+        "span_id": "span-2-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T11:04:00+00:00",
+        "service": "payments-consumer",
+        "operation": "handle_request",
+        "duration_ms": 131,
+        "status": "OK"
+      },
+      {
+        "trace_id": "bb972af85676aed4",
+        "span_id": "span-2-1",
+        "parent_span_id": "span-2-0",
+        "timestamp": "2026-01-15T11:04:01+00:00",
+        "service": "schema-registry",
+        "operation": "dependency_call",
+        "duration_ms": 86,
+        "status": "OK"
+      },
+      {
+        "trace_id": "3313e8257d6d451d",
+        "span_id": "span-3-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T11:07:00+00:00",
+        "service": "payments-consumer",
+        "operation": "handle_request",
+        "duration_ms": 2571,
+        "status": "ERROR"
+      },
+      {
+        "trace_id": "3313e8257d6d451d",
+        "span_id": "span-3-1",
+        "parent_span_id": "span-3-0",
+        "timestamp": "2026-01-15T11:07:01+00:00",
+        "service": "schema-registry",
+        "operation": "dependency_call",
+        "duration_ms": 1581,
+        "status": "OK"
+      },
+      {
+        "trace_id": "f53f902c683b8124",
+        "span_id": "span-4-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T11:10:00+00:00",
+        "service": "payments-consumer",
+        "operation": "handle_request",
+        "duration_ms": 3258,
+        "status": "ERROR"
+      },
+      {
+        "trace_id": "f53f902c683b8124",
+        "span_id": "span-4-1",
+        "parent_span_id": "span-4-0",
+        "timestamp": "2026-01-15T11:10:01+00:00",
+        "service": "schema-registry",
+        "operation": "dependency_call",
+        "duration_ms": 1974,
+        "status": "ERROR"
+      },
+      {
+        "trace_id": "9d2f5a15eb8e4b3b",
+        "span_id": "span-5-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T11:13:00+00:00",
+        "service": "payments-consumer",
+        "operation": "handle_request",
+        "duration_ms": 3130,
+        "status": "ERROR"
+      },
+      {
+        "trace_id": "9d2f5a15eb8e4b3b",
+        "span_id": "span-5-1",
+        "parent_span_id": "span-5-0",
+        "timestamp": "2026-01-15T11:13:01+00:00",
+        "service": "schema-registry",
+        "operation": "dependency_call",
+        "duration_ms": 1547,
+        "status": "ERROR"
+      }
+    ],
+    "runbook": "Check consumer lag by group, inspect failed offsets, compare schema registry versions, and quarantine poison messages before restarting the consumer.",
+    "ground_truth": {
+      "schema_version": "incidentforge.ground_truth.v1",
+      "incident_id": "ifg-b9a03d871e",
+      "scenario": "kafka-consumer-lag",
+      "service": "payments-consumer",
+      "severity": "SEV2",
+      "root_cause": "A backward-incompatible schema change introduced a poison message that repeatedly fails deserialization and stalls the payments consumer group.",
+      "root_cause_terms": [
+        "poison message",
+        "schema change",
+        "deserialization",
+        "payments consumer group",
+        "consumer lag"
+      ],
+      "evidence_terms": [
+        "consumer_lag_spike",
+        "deserialize_errors",
+        "stable_broker_cpu",
+        "Lag rises from 180 to more than 52000 offsets after 10:08 UTC.",
+        "Decode errors repeat for checkout.payment_authorized.v7.",
+        "Broker CPU remains below 42 percent, reducing broker saturation likelihood."
+      ],
+      "remediation_terms": [
+        "skip poison message",
+        "rollback schema",
+        "add dead letter queue",
+        "restart consumer",
+        "schema compatibility"
+      ],
+      "red_herring_terms": [
+        "checkout-api deploy",
+        "frontend validation",
+        "leader election",
+        "broker outage"
+      ],
+      "impact": "Payment confirmation events are delayed by 18 to 24 minutes.",
+      "expected_signals": [
+        {
+          "name": "consumer_lag_spike",
+          "source": "metrics",
+          "query": "sum(kafka_consumer_lag{group=\"payments-consumer\"})",
+          "expected": "Lag rises from 180 to more than 52000 offsets after 10:08 UTC.",
+          "weight": 1.0
+        },
+        {
+          "name": "deserialize_errors",
+          "source": "logs",
+          "query": "service=\"payments-consumer\" \"SchemaRegistryDecodeError\"",
+          "expected": "Decode errors repeat for checkout.payment_authorized.v7.",
+          "weight": 1.0
+        },
+        {
+          "name": "stable_broker_cpu",
+          "source": "metrics",
+          "query": "avg(kafka_broker_cpu{cluster=\"orders-eu\"})",
+          "expected": "Broker CPU remains below 42 percent, reducing broker saturation likelihood.",
+          "weight": 1.0
+        }
+      ],
+      "red_herrings": [
+        {
+          "clue": "A checkout-api deploy completed four minutes before the page fired.",
+          "reason": "The deploy only changed frontend validation and request volume stayed flat.",
+          "penalty_terms": [
+            "checkout-api deploy",
+            "frontend validation"
+          ],
+          "weight": 1.0
+        },
+        {
+          "clue": "A Kafka broker leader election occurred earlier in the hour.",
+          "reason": "Partition ISR recovered before the lag spike and broker health is normal.",
+          "penalty_terms": [
+            "leader election",
+            "broker outage"
+          ],
+          "weight": 1.0
+        }
+      ]
+    },
+    "examples": {
+      "strong": "The root cause is A backward-incompatible schema change introduced a poison message that repeatedly fails deserialization and stalls the payments consumer group. The affected service is payments-consumer. Evidence: consumer_lag_spike \u2014 Lag rises from 180 to more than 52000 offsets after 10:08 UTC. Also, deserialize_errors \u2014 Decode errors repeat for checkout.payment_authorized.v7. Finally, stable_broker_cpu \u2014 Broker CPU remains below 42 percent, reducing broker saturation likelihood. Remediation: skip poison message, rollback schema, and add dead letter queue.",
+      "fooled": "The likely cause is checkout-api deploy and broker outage. The clue was: A checkout-api deploy completed four minutes before the page fired. We should roll back the most recent unrelated change and keep monitoring."
+    }
+  },
+  {
+    "definition": {
+      "slug": "postgres-connection-exhaustion",
+      "title": "Postgres Connection Pool Exhaustion",
+      "summary": "API latency and 5xx errors rise because workers leak database connections after a retry path skips pool release.",
+      "severity": "SEV1",
+      "service": "orders-api",
+      "root_cause": "The orders-api retry path leaks Postgres connections when inventory lookups timeout, exhausting pgbouncer and causing request queuing.",
+      "root_cause_terms": [
+        "connection leak",
+        "pgbouncer",
+        "retry path",
+        "inventory timeout",
+        "connection pool exhausted"
+      ],
+      "impact": "Order creation p95 latency reaches 9.4 seconds and error rate reaches 11 percent.",
+      "signals": [
+        {
+          "name": "pgbouncer_waiting_clients",
+          "source": "metrics",
+          "query": "max(pgbouncer_pools_cl_waiting{database=\"orders\"})",
+          "expected": "Waiting clients rise from 0 to 146 while active connections cap out.",
+          "weight": 1.0
+        },
+        {
+          "name": "retry_timeout_logs",
+          "source": "logs",
+          "query": "service=\"orders-api\" \"inventory timeout\" \"retry\"",
+          "expected": "Retries continue after inventory timeouts without a matching pool release log.",
+          "weight": 1.0
+        },
+        {
+          "name": "db_cpu_normal",
+          "source": "metrics",
+          "query": "avg(postgres_cpu_percent{cluster=\"orders-primary\"})",
+          "expected": "Database CPU remains under 55 percent, pointing away from query saturation.",
+          "weight": 1.0
+        }
+      ],
+      "red_herrings": [
+        {
+          "clue": "A read replica reported replication lag.",
+          "reason": "The failing write path uses the primary database, not the read replica.",
+          "penalty_terms": [
+            "replication lag",
+            "read replica"
+          ],
+          "weight": 1.0
+        },
+        {
+          "clue": "CloudFront cache hit ratio dropped.",
+          "reason": "Checkout order creation is not cacheable and bypasses CloudFront.",
+          "penalty_terms": [
+            "cloudfront",
+            "cache hit"
+          ],
+          "weight": 1.0
+        }
+      ],
+      "remediation_terms": [
+        "patch retry path",
+        "release connection",
+        "raise pool limit temporarily",
+        "restart workers",
+        "add regression test"
+      ],
+      "timeline": [
+        {
+          "minute": 0,
+          "service": "orders-api",
+          "event": "inventory retries increase",
+          "evidence": "retry_timeout_logs"
+        },
+        {
+          "minute": 6,
+          "service": "pgbouncer",
+          "event": "waiting clients rise",
+          "evidence": "pgbouncer_waiting_clients"
+        },
+        {
+          "minute": 9,
+          "service": "orders-api",
+          "event": "5xx errors breach SLO",
+          "evidence": "error rate"
+        },
+        {
+          "minute": 13,
+          "service": "pagerduty",
+          "event": "SEV1 alert triggered",
+          "evidence": "latency and errors"
+        }
+      ],
+      "runbook": "Check pgbouncer pool state, compare active and waiting clients, inspect application retry paths, and verify release/finally blocks around database usage.",
+      "tags": [
+        "postgres",
+        "pgbouncer",
+        "api",
+        "latency"
+      ]
+    },
+    "manifest": {
+      "schema_version": "incidentforge.bundle.v1",
+      "incident_id": "ifg-7ec4e9f1ce",
+      "scenario": "postgres-connection-exhaustion",
+      "title": "Postgres Connection Pool Exhaustion",
+      "seed": 9,
+      "started_at": "2026-01-15T11:58:00+00:00",
+      "files": {
+        "alert": "alert.json",
+        "metrics": "metrics.csv",
+        "logs": "logs.jsonl",
+        "traces": "traces.json",
+        "runbook": "runbook.md",
+        "ground_truth": "ground_truth.json",
+        "ground_truth_yaml": "ground_truth.yaml"
+      }
+    },
+    "alert": {
+      "schema_version": "incidentforge.alert.v1",
+      "incident_id": "ifg-7ec4e9f1ce",
+      "title": "Postgres Connection Pool Exhaustion",
+      "severity": "SEV1",
+      "service": "orders-api",
+      "summary": "API latency and 5xx errors rise because workers leak database connections after a retry path skips pool release.",
+      "started_at": "2026-01-15T11:58:00+00:00",
+      "labels": {
+        "team": "platform",
+        "environment": "production",
+        "scenario": "postgres-connection-exhaustion",
+        "source": "incidentforge"
+      },
+      "links": {
+        "runbook": "runbook.md",
+        "metrics": "metrics.csv",
+        "logs": "logs.jsonl",
+        "traces": "traces.json"
+      }
+    },
+    "metrics": [
+      {
+        "timestamp": "2026-01-15T11:58:00+00:00",
+        "metric": "service_error_rate",
+        "service": "orders-api",
+        "value": 0.01,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:58:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "orders-api",
+        "value": 180,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:58:00+00:00",
+        "metric": "pgbouncer_waiting_clients",
+        "service": "orders-api",
+        "value": 10.56,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:58:00+00:00",
+        "metric": "retry_timeout_logs",
+        "service": "orders-api",
+        "value": 15.02,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:58:00+00:00",
+        "metric": "db_cpu_normal",
+        "service": "orders-api",
+        "value": 21.39,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:00:00+00:00",
+        "metric": "service_error_rate",
+        "service": "orders-api",
+        "value": 0.0233,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:00:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "orders-api",
+        "value": 734,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:00:00+00:00",
+        "metric": "pgbouncer_waiting_clients",
+        "service": "orders-api",
+        "value": 31.56,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:00:00+00:00",
+        "metric": "retry_timeout_logs",
+        "service": "orders-api",
+        "value": 57.37,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:00:00+00:00",
+        "metric": "db_cpu_normal",
+        "service": "orders-api",
+        "value": 68.51,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:02:00+00:00",
+        "metric": "service_error_rate",
+        "service": "orders-api",
+        "value": 0.0417,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:02:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "orders-api",
+        "value": 2089,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:02:00+00:00",
+        "metric": "pgbouncer_waiting_clients",
+        "service": "orders-api",
+        "value": 43.97,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:02:00+00:00",
+        "metric": "retry_timeout_logs",
+        "service": "orders-api",
+        "value": 70.15,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:02:00+00:00",
+        "metric": "db_cpu_normal",
+        "service": "orders-api",
+        "value": 93.52,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:04:00+00:00",
+        "metric": "service_error_rate",
+        "service": "orders-api",
+        "value": 0.057,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:04:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "orders-api",
+        "value": 2631,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:04:00+00:00",
+        "metric": "pgbouncer_waiting_clients",
+        "service": "orders-api",
+        "value": 45.32,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:04:00+00:00",
+        "metric": "retry_timeout_logs",
+        "service": "orders-api",
+        "value": 114.12,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:04:00+00:00",
+        "metric": "db_cpu_normal",
+        "service": "orders-api",
+        "value": 127.38,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:06:00+00:00",
+        "metric": "service_error_rate",
+        "service": "orders-api",
+        "value": 0.0511,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:06:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "orders-api",
+        "value": 1948,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:06:00+00:00",
+        "metric": "pgbouncer_waiting_clients",
+        "service": "orders-api",
+        "value": 98.38,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:06:00+00:00",
+        "metric": "retry_timeout_logs",
+        "service": "orders-api",
+        "value": 108.32,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:06:00+00:00",
+        "metric": "db_cpu_normal",
+        "service": "orders-api",
+        "value": 180.19,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:08:00+00:00",
+        "metric": "service_error_rate",
+        "service": "orders-api",
+        "value": 0.0666,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:08:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "orders-api",
+        "value": 1463,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:08:00+00:00",
+        "metric": "pgbouncer_waiting_clients",
+        "service": "orders-api",
+        "value": 77.75,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:08:00+00:00",
+        "metric": "retry_timeout_logs",
+        "service": "orders-api",
+        "value": 117.64,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:08:00+00:00",
+        "metric": "db_cpu_normal",
+        "service": "orders-api",
+        "value": 185.81,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:10:00+00:00",
+        "metric": "service_error_rate",
+        "service": "orders-api",
+        "value": 0.1006,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:10:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "orders-api",
+        "value": 2309,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:10:00+00:00",
+        "metric": "pgbouncer_waiting_clients",
+        "service": "orders-api",
+        "value": 72.96,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:10:00+00:00",
+        "metric": "retry_timeout_logs",
+        "service": "orders-api",
+        "value": 278.72,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:10:00+00:00",
+        "metric": "db_cpu_normal",
+        "service": "orders-api",
+        "value": 234.39,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:12:00+00:00",
+        "metric": "service_error_rate",
+        "service": "orders-api",
+        "value": 0.0715,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:12:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "orders-api",
+        "value": 7145,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:12:00+00:00",
+        "metric": "pgbouncer_waiting_clients",
+        "service": "orders-api",
+        "value": 145.34,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:12:00+00:00",
+        "metric": "retry_timeout_logs",
+        "service": "orders-api",
+        "value": 199.74,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:12:00+00:00",
+        "metric": "db_cpu_normal",
+        "service": "orders-api",
+        "value": 256.65,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:14:00+00:00",
+        "metric": "service_error_rate",
+        "service": "orders-api",
+        "value": 0.1351,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:14:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "orders-api",
+        "value": 5982,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:14:00+00:00",
+        "metric": "pgbouncer_waiting_clients",
+        "service": "orders-api",
+        "value": 101.72,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:14:00+00:00",
+        "metric": "retry_timeout_logs",
+        "service": "orders-api",
+        "value": 313.76,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:14:00+00:00",
+        "metric": "db_cpu_normal",
+        "service": "orders-api",
+        "value": 419.21,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:16:00+00:00",
+        "metric": "service_error_rate",
+        "service": "orders-api",
+        "value": 0.0915,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:16:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "orders-api",
+        "value": 8146,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:16:00+00:00",
+        "metric": "pgbouncer_waiting_clients",
+        "service": "orders-api",
+        "value": 103.1,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:16:00+00:00",
+        "metric": "retry_timeout_logs",
+        "service": "orders-api",
+        "value": 211.52,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:16:00+00:00",
+        "metric": "db_cpu_normal",
+        "service": "orders-api",
+        "value": 493.16,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:18:00+00:00",
+        "metric": "service_error_rate",
+        "service": "orders-api",
+        "value": 0.0825,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:18:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "orders-api",
+        "value": 4091,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:18:00+00:00",
+        "metric": "pgbouncer_waiting_clients",
+        "service": "orders-api",
+        "value": 163.05,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:18:00+00:00",
+        "metric": "retry_timeout_logs",
+        "service": "orders-api",
+        "value": 215.24,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:18:00+00:00",
+        "metric": "db_cpu_normal",
+        "service": "orders-api",
+        "value": 544.98,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:20:00+00:00",
+        "metric": "service_error_rate",
+        "service": "orders-api",
+        "value": 0.1399,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:20:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "orders-api",
+        "value": 2873,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:20:00+00:00",
+        "metric": "pgbouncer_waiting_clients",
+        "service": "orders-api",
+        "value": 181.21,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:20:00+00:00",
+        "metric": "retry_timeout_logs",
+        "service": "orders-api",
+        "value": 235.49,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:20:00+00:00",
+        "metric": "db_cpu_normal",
+        "service": "orders-api",
+        "value": 452.13,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:22:00+00:00",
+        "metric": "service_error_rate",
+        "service": "orders-api",
+        "value": 0.102,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:22:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "orders-api",
+        "value": 7402,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:22:00+00:00",
+        "metric": "pgbouncer_waiting_clients",
+        "service": "orders-api",
+        "value": 157.77,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:22:00+00:00",
+        "metric": "retry_timeout_logs",
+        "service": "orders-api",
+        "value": 375.06,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:22:00+00:00",
+        "metric": "db_cpu_normal",
+        "service": "orders-api",
+        "value": 392.33,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:24:00+00:00",
+        "metric": "service_error_rate",
+        "service": "orders-api",
+        "value": 0.1329,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:24:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "orders-api",
+        "value": 4874,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:24:00+00:00",
+        "metric": "pgbouncer_waiting_clients",
+        "service": "orders-api",
+        "value": 147.63,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:24:00+00:00",
+        "metric": "retry_timeout_logs",
+        "service": "orders-api",
+        "value": 227.96,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:24:00+00:00",
+        "metric": "db_cpu_normal",
+        "service": "orders-api",
+        "value": 481.24,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:26:00+00:00",
+        "metric": "service_error_rate",
+        "service": "orders-api",
+        "value": 0.1027,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:26:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "orders-api",
+        "value": 6858,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:26:00+00:00",
+        "metric": "pgbouncer_waiting_clients",
+        "service": "orders-api",
+        "value": 132.0,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:26:00+00:00",
+        "metric": "retry_timeout_logs",
+        "service": "orders-api",
+        "value": 203.64,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:26:00+00:00",
+        "metric": "db_cpu_normal",
+        "service": "orders-api",
+        "value": 428.81,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:28:00+00:00",
+        "metric": "service_error_rate",
+        "service": "orders-api",
+        "value": 0.1289,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:28:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "orders-api",
+        "value": 4396,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:28:00+00:00",
+        "metric": "pgbouncer_waiting_clients",
+        "service": "orders-api",
+        "value": 170.85,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:28:00+00:00",
+        "metric": "retry_timeout_logs",
+        "service": "orders-api",
+        "value": 309.35,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:28:00+00:00",
+        "metric": "db_cpu_normal",
+        "service": "orders-api",
+        "value": 270.14,
+        "unit": "score",
+        "signal": "expected_evidence"
+      }
+    ],
+    "logs": [
+      {
+        "timestamp": "2026-01-15T11:58:00+00:00",
+        "level": "WARN",
+        "service": "orders-api",
+        "message": "inventory retries increase",
+        "evidence": "retry_timeout_logs",
+        "trace_id": "0121f3d0f4c32f74"
+      },
+      {
+        "timestamp": "2026-01-15T11:58:00+00:00",
+        "level": "INFO",
+        "service": "orders-api",
+        "message": "background refresh completed"
+      },
+      {
+        "timestamp": "2026-01-15T11:58:00+00:00",
+        "level": "INFO",
+        "service": "orders-api",
+        "message": "rate limiter budget healthy"
+      },
+      {
+        "timestamp": "2026-01-15T12:03:00+00:00",
+        "level": "INFO",
+        "service": "change-feed",
+        "message": "CloudFront cache hit ratio dropped.",
+        "why_not_root_cause": "Checkout order creation is not cacheable and bypasses CloudFront."
+      },
+      {
+        "timestamp": "2026-01-15T12:04:00+00:00",
+        "level": "WARN",
+        "service": "pgbouncer",
+        "message": "waiting clients rise",
+        "evidence": "pgbouncer_waiting_clients",
+        "trace_id": "26dc1df20ca4c653"
+      },
+      {
+        "timestamp": "2026-01-15T12:04:00+00:00",
+        "level": "INFO",
+        "service": "edge-router",
+        "message": "health check passed"
+      },
+      {
+        "timestamp": "2026-01-15T12:05:00+00:00",
+        "level": "INFO",
+        "service": "change-feed",
+        "message": "A read replica reported replication lag.",
+        "why_not_root_cause": "The failing write path uses the primary database, not the read replica."
+      },
+      {
+        "timestamp": "2026-01-15T12:07:00+00:00",
+        "level": "WARN",
+        "service": "orders-api",
+        "message": "5xx errors breach SLO",
+        "evidence": "error rate",
+        "trace_id": "d337ce0a8f1866bb"
+      },
+      {
+        "timestamp": "2026-01-15T12:07:00+00:00",
+        "level": "ERROR",
+        "service": "orders-api",
+        "message": "db_cpu_normal: Database CPU remains under 55 percent, pointing away from query saturation.",
+        "query_hint": "avg(postgres_cpu_percent{cluster=\"orders-primary\"})",
+        "source": "metrics"
+      },
+      {
+        "timestamp": "2026-01-15T12:09:00+00:00",
+        "level": "ERROR",
+        "service": "orders-api",
+        "message": "pgbouncer_waiting_clients: Waiting clients rise from 0 to 146 while active connections cap out.",
+        "query_hint": "max(pgbouncer_pools_cl_waiting{database=\"orders\"})",
+        "source": "metrics"
+      },
+      {
+        "timestamp": "2026-01-15T12:11:00+00:00",
+        "level": "ERROR",
+        "service": "pagerduty",
+        "message": "SEV1 alert triggered",
+        "evidence": "latency and errors",
+        "trace_id": "b9535d4478f79dfd"
+      },
+      {
+        "timestamp": "2026-01-15T12:11:00+00:00",
+        "level": "WARN",
+        "service": "orders-api",
+        "message": "health check passed"
+      },
+      {
+        "timestamp": "2026-01-15T12:13:00+00:00",
+        "level": "ERROR",
+        "service": "orders-api",
+        "message": "retry_timeout_logs: Retries continue after inventory timeouts without a matching pool release log.",
+        "query_hint": "service=\"orders-api\" \"inventory timeout\" \"retry\"",
+        "source": "logs"
+      },
+      {
+        "timestamp": "2026-01-15T12:13:00+00:00",
+        "level": "WARN",
+        "service": "edge-router",
+        "message": "request sample accepted"
+      },
+      {
+        "timestamp": "2026-01-15T12:19:00+00:00",
+        "level": "INFO",
+        "service": "orders-api",
+        "message": "background refresh completed"
+      },
+      {
+        "timestamp": "2026-01-15T12:20:00+00:00",
+        "level": "INFO",
+        "service": "worker-pool",
+        "message": "health check passed"
+      },
+      {
+        "timestamp": "2026-01-15T12:28:00+00:00",
+        "level": "INFO",
+        "service": "worker-pool",
+        "message": "background refresh completed"
+      },
+      {
+        "timestamp": "2026-01-15T12:28:00+00:00",
+        "level": "WARN",
+        "service": "edge-router",
+        "message": "request sample accepted"
+      },
+      {
+        "timestamp": "2026-01-15T12:28:00+00:00",
+        "level": "INFO",
+        "service": "orders-api",
+        "message": "request sample accepted"
+      },
+      {
+        "timestamp": "2026-01-15T12:28:00+00:00",
+        "level": "INFO",
+        "service": "edge-router",
+        "message": "request sample accepted"
+      },
+      {
+        "timestamp": "2026-01-15T12:28:00+00:00",
+        "level": "INFO",
+        "service": "worker-pool",
+        "message": "background refresh completed"
+      }
+    ],
+    "traces": [
+      {
+        "trace_id": "0121f3d0f4c32f74",
+        "span_id": "span-0-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T11:58:00+00:00",
+        "service": "orders-api",
+        "operation": "handle_request",
+        "duration_ms": 180,
+        "status": "OK"
+      },
+      {
+        "trace_id": "0121f3d0f4c32f74",
+        "span_id": "span-0-1",
+        "parent_span_id": "span-0-0",
+        "timestamp": "2026-01-15T11:58:01+00:00",
+        "service": "pgbouncer",
+        "operation": "dependency_call",
+        "duration_ms": 79,
+        "status": "OK"
+      },
+      {
+        "trace_id": "c5221c7392029956",
+        "span_id": "span-1-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T12:01:00+00:00",
+        "service": "orders-api",
+        "operation": "handle_request",
+        "duration_ms": 351,
+        "status": "OK"
+      },
+      {
+        "trace_id": "c5221c7392029956",
+        "span_id": "span-1-1",
+        "parent_span_id": "span-1-0",
+        "timestamp": "2026-01-15T12:01:01+00:00",
+        "service": "pgbouncer",
+        "operation": "dependency_call",
+        "duration_ms": 165,
+        "status": "OK"
+      },
+      {
+        "trace_id": "fa328f16c9199967",
+        "span_id": "span-2-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T12:04:00+00:00",
+        "service": "orders-api",
+        "operation": "handle_request",
+        "duration_ms": 407,
+        "status": "OK"
+      },
+      {
+        "trace_id": "fa328f16c9199967",
+        "span_id": "span-2-1",
+        "parent_span_id": "span-2-0",
+        "timestamp": "2026-01-15T12:04:01+00:00",
+        "service": "pgbouncer",
+        "operation": "dependency_call",
+        "duration_ms": 286,
+        "status": "OK"
+      },
+      {
+        "trace_id": "00c3c0ebe8ac714e",
+        "span_id": "span-3-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T12:07:00+00:00",
+        "service": "orders-api",
+        "operation": "handle_request",
+        "duration_ms": 2368,
+        "status": "ERROR"
+      },
+      {
+        "trace_id": "00c3c0ebe8ac714e",
+        "span_id": "span-3-1",
+        "parent_span_id": "span-3-0",
+        "timestamp": "2026-01-15T12:07:01+00:00",
+        "service": "pgbouncer",
+        "operation": "dependency_call",
+        "duration_ms": 1509,
+        "status": "OK"
+      },
+      {
+        "trace_id": "ccad5c94efe135c1",
+        "span_id": "span-4-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T12:10:00+00:00",
+        "service": "orders-api",
+        "operation": "handle_request",
+        "duration_ms": 1492,
+        "status": "ERROR"
+      },
+      {
+        "trace_id": "ccad5c94efe135c1",
+        "span_id": "span-4-1",
+        "parent_span_id": "span-4-0",
+        "timestamp": "2026-01-15T12:10:01+00:00",
+        "service": "pgbouncer",
+        "operation": "dependency_call",
+        "duration_ms": 992,
+        "status": "ERROR"
+      },
+      {
+        "trace_id": "22467e826fd53ade",
+        "span_id": "span-5-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T12:13:00+00:00",
+        "service": "orders-api",
+        "operation": "handle_request",
+        "duration_ms": 1922,
+        "status": "ERROR"
+      },
+      {
+        "trace_id": "22467e826fd53ade",
+        "span_id": "span-5-1",
+        "parent_span_id": "span-5-0",
+        "timestamp": "2026-01-15T12:13:01+00:00",
+        "service": "pgbouncer",
+        "operation": "dependency_call",
+        "duration_ms": 1356,
+        "status": "ERROR"
+      }
+    ],
+    "runbook": "Check pgbouncer pool state, compare active and waiting clients, inspect application retry paths, and verify release/finally blocks around database usage.",
+    "ground_truth": {
+      "schema_version": "incidentforge.ground_truth.v1",
+      "incident_id": "ifg-7ec4e9f1ce",
+      "scenario": "postgres-connection-exhaustion",
+      "service": "orders-api",
+      "severity": "SEV1",
+      "root_cause": "The orders-api retry path leaks Postgres connections when inventory lookups timeout, exhausting pgbouncer and causing request queuing.",
+      "root_cause_terms": [
+        "connection leak",
+        "pgbouncer",
+        "retry path",
+        "inventory timeout",
+        "connection pool exhausted"
+      ],
+      "evidence_terms": [
+        "pgbouncer_waiting_clients",
+        "retry_timeout_logs",
+        "db_cpu_normal",
+        "Waiting clients rise from 0 to 146 while active connections cap out.",
+        "Retries continue after inventory timeouts without a matching pool release log.",
+        "Database CPU remains under 55 percent, pointing away from query saturation."
+      ],
+      "remediation_terms": [
+        "patch retry path",
+        "release connection",
+        "raise pool limit temporarily",
+        "restart workers",
+        "add regression test"
+      ],
+      "red_herring_terms": [
+        "replication lag",
+        "read replica",
+        "cloudfront",
+        "cache hit"
+      ],
+      "impact": "Order creation p95 latency reaches 9.4 seconds and error rate reaches 11 percent.",
+      "expected_signals": [
+        {
+          "name": "pgbouncer_waiting_clients",
+          "source": "metrics",
+          "query": "max(pgbouncer_pools_cl_waiting{database=\"orders\"})",
+          "expected": "Waiting clients rise from 0 to 146 while active connections cap out.",
+          "weight": 1.0
+        },
+        {
+          "name": "retry_timeout_logs",
+          "source": "logs",
+          "query": "service=\"orders-api\" \"inventory timeout\" \"retry\"",
+          "expected": "Retries continue after inventory timeouts without a matching pool release log.",
+          "weight": 1.0
+        },
+        {
+          "name": "db_cpu_normal",
+          "source": "metrics",
+          "query": "avg(postgres_cpu_percent{cluster=\"orders-primary\"})",
+          "expected": "Database CPU remains under 55 percent, pointing away from query saturation.",
+          "weight": 1.0
+        }
+      ],
+      "red_herrings": [
+        {
+          "clue": "A read replica reported replication lag.",
+          "reason": "The failing write path uses the primary database, not the read replica.",
+          "penalty_terms": [
+            "replication lag",
+            "read replica"
+          ],
+          "weight": 1.0
+        },
+        {
+          "clue": "CloudFront cache hit ratio dropped.",
+          "reason": "Checkout order creation is not cacheable and bypasses CloudFront.",
+          "penalty_terms": [
+            "cloudfront",
+            "cache hit"
+          ],
+          "weight": 1.0
+        }
+      ]
+    },
+    "examples": {
+      "strong": "The root cause is The orders-api retry path leaks Postgres connections when inventory lookups timeout, exhausting pgbouncer and causing request queuing. The affected service is orders-api. Evidence: pgbouncer_waiting_clients \u2014 Waiting clients rise from 0 to 146 while active connections cap out. Also, retry_timeout_logs \u2014 Retries continue after inventory timeouts without a matching pool release log. Finally, db_cpu_normal \u2014 Database CPU remains under 55 percent, pointing away from query saturation. Remediation: patch retry path, release connection, and raise pool limit temporarily.",
+      "fooled": "The likely cause is replication lag and cache hit. The clue was: A read replica reported replication lag. We should roll back the most recent unrelated change and keep monitoring."
+    }
+  },
+  {
+    "definition": {
+      "slug": "airflow-dag-backfill-storm",
+      "title": "Airflow DAG Backfill Storm",
+      "summary": "A data platform DAG floods the scheduler because a catchup flag was enabled during a deployment.",
+      "severity": "SEV2",
+      "service": "revenue-etl",
+      "root_cause": "The revenue-etl DAG was deployed with catchup enabled and an old start_date, creating a backfill storm that starves current scheduled runs.",
+      "root_cause_terms": [
+        "catchup enabled",
+        "old start_date",
+        "backfill storm",
+        "scheduler queued",
+        "revenue-etl"
+      ],
+      "impact": "Revenue freshness SLA misses by 47 minutes for the EU warehouse.",
+      "signals": [
+        {
+          "name": "queued_dag_runs",
+          "source": "metrics",
+          "query": "max(airflow_dagrun_queued{dag_id=\"revenue-etl\"})",
+          "expected": "Queued DAG runs jump from 2 to 318 after the deployment.",
+          "weight": 1.0
+        },
+        {
+          "name": "catchup_config",
+          "source": "logs",
+          "query": "dag_id=\"revenue-etl\" \"catchup=True\"",
+          "expected": "Scheduler logs show catchup=True with start_date=2025-01-01.",
+          "weight": 1.0
+        },
+        {
+          "name": "worker_capacity_ok",
+          "source": "metrics",
+          "query": "avg(celery_worker_concurrency_used{queue=\"etl\"})",
+          "expected": "Workers have spare slots, so worker capacity is not the primary limiter.",
+          "weight": 1.0
+        }
+      ],
+      "red_herrings": [
+        {
+          "clue": "Snowflake warehouse queue time briefly increased.",
+          "reason": "Warehouse queueing starts after the Airflow backlog and is downstream impact.",
+          "penalty_terms": [
+            "snowflake queue",
+            "warehouse queue"
+          ],
+          "weight": 1.0
+        },
+        {
+          "clue": "A dbt model emitted warnings.",
+          "reason": "The warnings are non-fatal and appear in successful historical runs too.",
+          "penalty_terms": [
+            "dbt warning",
+            "dbt model"
+          ],
+          "weight": 1.0
+        }
+      ],
+      "remediation_terms": [
+        "disable catchup",
+        "reset start_date",
+        "clear queued backfills",
+        "pause dag",
+        "scheduler guardrail"
+      ],
+      "timeline": [
+        {
+          "minute": 0,
+          "service": "gitlab",
+          "event": "DAG config deployed",
+          "evidence": "catchup=True"
+        },
+        {
+          "minute": 3,
+          "service": "airflow-scheduler",
+          "event": "historical runs queued",
+          "evidence": "queued_dag_runs"
+        },
+        {
+          "minute": 11,
+          "service": "revenue-etl",
+          "event": "freshness SLA warning",
+          "evidence": "stale partition"
+        },
+        {
+          "minute": 18,
+          "service": "pagerduty",
+          "event": "SEV2 alert triggered",
+          "evidence": "freshness breach"
+        }
+      ],
+      "runbook": "Inspect DAG config changes, queued run count, scheduler health, pool slots, and downstream warehouse queue time before clearing or pausing runs.",
+      "tags": [
+        "airflow",
+        "data-platform",
+        "scheduler",
+        "etl"
+      ]
+    },
+    "manifest": {
+      "schema_version": "incidentforge.bundle.v1",
+      "incident_id": "ifg-e57ceede8e",
+      "scenario": "airflow-dag-backfill-storm",
+      "title": "Airflow DAG Backfill Storm",
+      "seed": 10,
+      "started_at": "2026-01-15T12:26:00+00:00",
+      "files": {
+        "alert": "alert.json",
+        "metrics": "metrics.csv",
+        "logs": "logs.jsonl",
+        "traces": "traces.json",
+        "runbook": "runbook.md",
+        "ground_truth": "ground_truth.json",
+        "ground_truth_yaml": "ground_truth.yaml"
+      }
+    },
+    "alert": {
+      "schema_version": "incidentforge.alert.v1",
+      "incident_id": "ifg-e57ceede8e",
+      "title": "Airflow DAG Backfill Storm",
+      "severity": "SEV2",
+      "service": "revenue-etl",
+      "summary": "A data platform DAG floods the scheduler because a catchup flag was enabled during a deployment.",
+      "started_at": "2026-01-15T12:26:00+00:00",
+      "labels": {
+        "team": "platform",
+        "environment": "production",
+        "scenario": "airflow-dag-backfill-storm",
+        "source": "incidentforge"
+      },
+      "links": {
+        "runbook": "runbook.md",
+        "metrics": "metrics.csv",
+        "logs": "logs.jsonl",
+        "traces": "traces.json"
+      }
+    },
+    "metrics": [
+      {
+        "timestamp": "2026-01-15T12:26:00+00:00",
+        "metric": "service_error_rate",
+        "service": "revenue-etl",
+        "value": 0.01,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:26:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "revenue-etl",
+        "value": 180,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:26:00+00:00",
+        "metric": "queued_dag_runs",
+        "service": "revenue-etl",
+        "value": 10.04,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:26:00+00:00",
+        "metric": "catchup_config",
+        "service": "revenue-etl",
+        "value": 17.44,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:26:00+00:00",
+        "metric": "worker_capacity_ok",
+        "service": "revenue-etl",
+        "value": 21.96,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:28:00+00:00",
+        "metric": "service_error_rate",
+        "service": "revenue-etl",
+        "value": 0.02,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:28:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "revenue-etl",
+        "value": 925,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:28:00+00:00",
+        "metric": "queued_dag_runs",
+        "service": "revenue-etl",
+        "value": 28.73,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:28:00+00:00",
+        "metric": "catchup_config",
+        "service": "revenue-etl",
+        "value": 45.61,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:28:00+00:00",
+        "metric": "worker_capacity_ok",
+        "service": "revenue-etl",
+        "value": 88.61,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:30:00+00:00",
+        "metric": "service_error_rate",
+        "service": "revenue-etl",
+        "value": 0.0282,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:30:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "revenue-etl",
+        "value": 2366,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:30:00+00:00",
+        "metric": "queued_dag_runs",
+        "service": "revenue-etl",
+        "value": 36.06,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:30:00+00:00",
+        "metric": "catchup_config",
+        "service": "revenue-etl",
+        "value": 80.26,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:30:00+00:00",
+        "metric": "worker_capacity_ok",
+        "service": "revenue-etl",
+        "value": 145.29,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:32:00+00:00",
+        "metric": "service_error_rate",
+        "service": "revenue-etl",
+        "value": 0.0402,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:32:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "revenue-etl",
+        "value": 1748,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:32:00+00:00",
+        "metric": "queued_dag_runs",
+        "service": "revenue-etl",
+        "value": 72.59,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:32:00+00:00",
+        "metric": "catchup_config",
+        "service": "revenue-etl",
+        "value": 120.8,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:32:00+00:00",
+        "metric": "worker_capacity_ok",
+        "service": "revenue-etl",
+        "value": 146.66,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:34:00+00:00",
+        "metric": "service_error_rate",
+        "service": "revenue-etl",
+        "value": 0.0634,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:34:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "revenue-etl",
+        "value": 1211,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:34:00+00:00",
+        "metric": "queued_dag_runs",
+        "service": "revenue-etl",
+        "value": 87.01,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:34:00+00:00",
+        "metric": "catchup_config",
+        "service": "revenue-etl",
+        "value": 112.58,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:34:00+00:00",
+        "metric": "worker_capacity_ok",
+        "service": "revenue-etl",
+        "value": 198.61,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:36:00+00:00",
+        "metric": "service_error_rate",
+        "service": "revenue-etl",
+        "value": 0.0827,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:36:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "revenue-etl",
+        "value": 2471,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:36:00+00:00",
+        "metric": "queued_dag_runs",
+        "service": "revenue-etl",
+        "value": 87.0,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:36:00+00:00",
+        "metric": "catchup_config",
+        "service": "revenue-etl",
+        "value": 187.56,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:36:00+00:00",
+        "metric": "worker_capacity_ok",
+        "service": "revenue-etl",
+        "value": 186.96,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:38:00+00:00",
+        "metric": "service_error_rate",
+        "service": "revenue-etl",
+        "value": 0.0771,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:38:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "revenue-etl",
+        "value": 4538,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:38:00+00:00",
+        "metric": "queued_dag_runs",
+        "service": "revenue-etl",
+        "value": 87.53,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:38:00+00:00",
+        "metric": "catchup_config",
+        "service": "revenue-etl",
+        "value": 213.72,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:38:00+00:00",
+        "metric": "worker_capacity_ok",
+        "service": "revenue-etl",
+        "value": 210.49,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:40:00+00:00",
+        "metric": "service_error_rate",
+        "service": "revenue-etl",
+        "value": 0.1142,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:40:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "revenue-etl",
+        "value": 6382,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:40:00+00:00",
+        "metric": "queued_dag_runs",
+        "service": "revenue-etl",
+        "value": 89.48,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:40:00+00:00",
+        "metric": "catchup_config",
+        "service": "revenue-etl",
+        "value": 172.95,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:40:00+00:00",
+        "metric": "worker_capacity_ok",
+        "service": "revenue-etl",
+        "value": 421.84,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:42:00+00:00",
+        "metric": "service_error_rate",
+        "service": "revenue-etl",
+        "value": 0.1348,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:42:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "revenue-etl",
+        "value": 3106,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:42:00+00:00",
+        "metric": "queued_dag_runs",
+        "service": "revenue-etl",
+        "value": 106.89,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:42:00+00:00",
+        "metric": "catchup_config",
+        "service": "revenue-etl",
+        "value": 371.29,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:42:00+00:00",
+        "metric": "worker_capacity_ok",
+        "service": "revenue-etl",
+        "value": 325.95,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:44:00+00:00",
+        "metric": "service_error_rate",
+        "service": "revenue-etl",
+        "value": 0.0915,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:44:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "revenue-etl",
+        "value": 4736,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:44:00+00:00",
+        "metric": "queued_dag_runs",
+        "service": "revenue-etl",
+        "value": 147.91,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:44:00+00:00",
+        "metric": "catchup_config",
+        "service": "revenue-etl",
+        "value": 289.74,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:44:00+00:00",
+        "metric": "worker_capacity_ok",
+        "service": "revenue-etl",
+        "value": 365.43,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:46:00+00:00",
+        "metric": "service_error_rate",
+        "service": "revenue-etl",
+        "value": 0.1113,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:46:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "revenue-etl",
+        "value": 8965,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:46:00+00:00",
+        "metric": "queued_dag_runs",
+        "service": "revenue-etl",
+        "value": 105.8,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:46:00+00:00",
+        "metric": "catchup_config",
+        "service": "revenue-etl",
+        "value": 251.49,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:46:00+00:00",
+        "metric": "worker_capacity_ok",
+        "service": "revenue-etl",
+        "value": 511.83,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:48:00+00:00",
+        "metric": "service_error_rate",
+        "service": "revenue-etl",
+        "value": 0.0905,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:48:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "revenue-etl",
+        "value": 3322,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:48:00+00:00",
+        "metric": "queued_dag_runs",
+        "service": "revenue-etl",
+        "value": 153.32,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:48:00+00:00",
+        "metric": "catchup_config",
+        "service": "revenue-etl",
+        "value": 258.3,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:48:00+00:00",
+        "metric": "worker_capacity_ok",
+        "service": "revenue-etl",
+        "value": 261.63,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:50:00+00:00",
+        "metric": "service_error_rate",
+        "service": "revenue-etl",
+        "value": 0.0826,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:50:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "revenue-etl",
+        "value": 9227,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:50:00+00:00",
+        "metric": "queued_dag_runs",
+        "service": "revenue-etl",
+        "value": 130.73,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:50:00+00:00",
+        "metric": "catchup_config",
+        "service": "revenue-etl",
+        "value": 242.34,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:50:00+00:00",
+        "metric": "worker_capacity_ok",
+        "service": "revenue-etl",
+        "value": 482.47,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:52:00+00:00",
+        "metric": "service_error_rate",
+        "service": "revenue-etl",
+        "value": 0.1352,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:52:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "revenue-etl",
+        "value": 5941,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:52:00+00:00",
+        "metric": "queued_dag_runs",
+        "service": "revenue-etl",
+        "value": 178.68,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:52:00+00:00",
+        "metric": "catchup_config",
+        "service": "revenue-etl",
+        "value": 364.58,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:52:00+00:00",
+        "metric": "worker_capacity_ok",
+        "service": "revenue-etl",
+        "value": 363.56,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:54:00+00:00",
+        "metric": "service_error_rate",
+        "service": "revenue-etl",
+        "value": 0.1161,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:54:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "revenue-etl",
+        "value": 2394,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:54:00+00:00",
+        "metric": "queued_dag_runs",
+        "service": "revenue-etl",
+        "value": 112.47,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:54:00+00:00",
+        "metric": "catchup_config",
+        "service": "revenue-etl",
+        "value": 295.69,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:54:00+00:00",
+        "metric": "worker_capacity_ok",
+        "service": "revenue-etl",
+        "value": 312.26,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:56:00+00:00",
+        "metric": "service_error_rate",
+        "service": "revenue-etl",
+        "value": 0.1151,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:56:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "revenue-etl",
+        "value": 6292,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:56:00+00:00",
+        "metric": "queued_dag_runs",
+        "service": "revenue-etl",
+        "value": 140.47,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:56:00+00:00",
+        "metric": "catchup_config",
+        "service": "revenue-etl",
+        "value": 218.68,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:56:00+00:00",
+        "metric": "worker_capacity_ok",
+        "service": "revenue-etl",
+        "value": 298.91,
+        "unit": "score",
+        "signal": "expected_evidence"
+      }
+    ],
+    "logs": [
+      {
+        "timestamp": "2026-01-15T12:26:00+00:00",
+        "level": "WARN",
+        "service": "gitlab",
+        "message": "DAG config deployed",
+        "evidence": "catchup=True",
+        "trace_id": "aadef443f276e554"
+      },
+      {
+        "timestamp": "2026-01-15T12:26:00+00:00",
+        "level": "INFO",
+        "service": "change-feed",
+        "message": "Snowflake warehouse queue time briefly increased.",
+        "why_not_root_cause": "Warehouse queueing starts after the Airflow backlog and is downstream impact."
+      },
+      {
+        "timestamp": "2026-01-15T12:26:00+00:00",
+        "level": "INFO",
+        "service": "edge-router",
+        "message": "rate limiter budget healthy"
+      },
+      {
+        "timestamp": "2026-01-15T12:28:00+00:00",
+        "level": "INFO",
+        "service": "revenue-etl",
+        "message": "rate limiter budget healthy"
+      },
+      {
+        "timestamp": "2026-01-15T12:29:00+00:00",
+        "level": "WARN",
+        "service": "airflow-scheduler",
+        "message": "historical runs queued",
+        "evidence": "queued_dag_runs",
+        "trace_id": "c74e6ef4a8fbca8b"
+      },
+      {
+        "timestamp": "2026-01-15T12:29:00+00:00",
+        "level": "ERROR",
+        "service": "revenue-etl",
+        "message": "worker_capacity_ok: Workers have spare slots, so worker capacity is not the primary limiter.",
+        "query_hint": "avg(celery_worker_concurrency_used{queue=\"etl\"})",
+        "source": "metrics"
+      },
+      {
+        "timestamp": "2026-01-15T12:33:00+00:00",
+        "level": "INFO",
+        "service": "change-feed",
+        "message": "A dbt model emitted warnings.",
+        "why_not_root_cause": "The warnings are non-fatal and appear in successful historical runs too."
+      },
+      {
+        "timestamp": "2026-01-15T12:35:00+00:00",
+        "level": "ERROR",
+        "service": "revenue-etl",
+        "message": "queued_dag_runs: Queued DAG runs jump from 2 to 318 after the deployment.",
+        "query_hint": "max(airflow_dagrun_queued{dag_id=\"revenue-etl\"})",
+        "source": "metrics"
+      },
+      {
+        "timestamp": "2026-01-15T12:36:00+00:00",
+        "level": "WARN",
+        "service": "edge-router",
+        "message": "rate limiter budget healthy"
+      },
+      {
+        "timestamp": "2026-01-15T12:37:00+00:00",
+        "level": "ERROR",
+        "service": "revenue-etl",
+        "message": "freshness SLA warning",
+        "evidence": "stale partition",
+        "trace_id": "98b63c9efd1d77f8"
+      },
+      {
+        "timestamp": "2026-01-15T12:39:00+00:00",
+        "level": "INFO",
+        "service": "worker-pool",
+        "message": "request sample accepted"
+      },
+      {
+        "timestamp": "2026-01-15T12:42:00+00:00",
+        "level": "ERROR",
+        "service": "revenue-etl",
+        "message": "catchup_config: Scheduler logs show catchup=True with start_date=2025-01-01.",
+        "query_hint": "dag_id=\"revenue-etl\" \"catchup=True\"",
+        "source": "logs"
+      },
+      {
+        "timestamp": "2026-01-15T12:43:00+00:00",
+        "level": "INFO",
+        "service": "revenue-etl",
+        "message": "background refresh completed"
+      },
+      {
+        "timestamp": "2026-01-15T12:44:00+00:00",
+        "level": "ERROR",
+        "service": "pagerduty",
+        "message": "SEV2 alert triggered",
+        "evidence": "freshness breach",
+        "trace_id": "ecbb0fbc90c3d412"
+      },
+      {
+        "timestamp": "2026-01-15T12:47:00+00:00",
+        "level": "INFO",
+        "service": "worker-pool",
+        "message": "rate limiter budget healthy"
+      },
+      {
+        "timestamp": "2026-01-15T12:49:00+00:00",
+        "level": "INFO",
+        "service": "edge-router",
+        "message": "health check passed"
+      },
+      {
+        "timestamp": "2026-01-15T12:52:00+00:00",
+        "level": "INFO",
+        "service": "revenue-etl",
+        "message": "rate limiter budget healthy"
+      },
+      {
+        "timestamp": "2026-01-15T12:52:00+00:00",
+        "level": "INFO",
+        "service": "revenue-etl",
+        "message": "rate limiter budget healthy"
+      },
+      {
+        "timestamp": "2026-01-15T12:53:00+00:00",
+        "level": "INFO",
+        "service": "worker-pool",
+        "message": "rate limiter budget healthy"
+      },
+      {
+        "timestamp": "2026-01-15T12:53:00+00:00",
+        "level": "INFO",
+        "service": "worker-pool",
+        "message": "background refresh completed"
+      },
+      {
+        "timestamp": "2026-01-15T12:54:00+00:00",
+        "level": "INFO",
+        "service": "revenue-etl",
+        "message": "health check passed"
+      }
+    ],
+    "traces": [
+      {
+        "trace_id": "aadef443f276e554",
+        "span_id": "span-0-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T12:26:00+00:00",
+        "service": "revenue-etl",
+        "operation": "handle_request",
+        "duration_ms": 192,
+        "status": "OK"
+      },
+      {
+        "trace_id": "aadef443f276e554",
+        "span_id": "span-0-1",
+        "parent_span_id": "span-0-0",
+        "timestamp": "2026-01-15T12:26:01+00:00",
+        "service": "airflow-scheduler",
+        "operation": "dependency_call",
+        "duration_ms": 106,
+        "status": "OK"
+      },
+      {
+        "trace_id": "9637201895b18839",
+        "span_id": "span-1-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T12:29:00+00:00",
+        "service": "revenue-etl",
+        "operation": "handle_request",
+        "duration_ms": 325,
+        "status": "OK"
+      },
+      {
+        "trace_id": "9637201895b18839",
+        "span_id": "span-1-1",
+        "parent_span_id": "span-1-0",
+        "timestamp": "2026-01-15T12:29:01+00:00",
+        "service": "airflow-scheduler",
+        "operation": "dependency_call",
+        "duration_ms": 247,
+        "status": "OK"
+      },
+      {
+        "trace_id": "31c13723f6e79625",
+        "span_id": "span-2-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T12:32:00+00:00",
+        "service": "revenue-etl",
+        "operation": "handle_request",
+        "duration_ms": 218,
+        "status": "OK"
+      },
+      {
+        "trace_id": "31c13723f6e79625",
+        "span_id": "span-2-1",
+        "parent_span_id": "span-2-0",
+        "timestamp": "2026-01-15T12:32:01+00:00",
+        "service": "airflow-scheduler",
+        "operation": "dependency_call",
+        "duration_ms": 171,
+        "status": "OK"
+      },
+      {
+        "trace_id": "c74e6ef4a8fbca8b",
+        "span_id": "span-3-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T12:35:00+00:00",
+        "service": "revenue-etl",
+        "operation": "handle_request",
+        "duration_ms": 1547,
+        "status": "ERROR"
+      },
+      {
+        "trace_id": "c74e6ef4a8fbca8b",
+        "span_id": "span-3-1",
+        "parent_span_id": "span-3-0",
+        "timestamp": "2026-01-15T12:35:01+00:00",
+        "service": "airflow-scheduler",
+        "operation": "dependency_call",
+        "duration_ms": 695,
+        "status": "OK"
+      },
+      {
+        "trace_id": "6809ae8a80486ca0",
+        "span_id": "span-4-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T12:38:00+00:00",
+        "service": "revenue-etl",
+        "operation": "handle_request",
+        "duration_ms": 1597,
+        "status": "ERROR"
+      },
+      {
+        "trace_id": "6809ae8a80486ca0",
+        "span_id": "span-4-1",
+        "parent_span_id": "span-4-0",
+        "timestamp": "2026-01-15T12:38:01+00:00",
+        "service": "airflow-scheduler",
+        "operation": "dependency_call",
+        "duration_ms": 922,
+        "status": "ERROR"
+      },
+      {
+        "trace_id": "77015003da7997c4",
+        "span_id": "span-5-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T12:41:00+00:00",
+        "service": "revenue-etl",
+        "operation": "handle_request",
+        "duration_ms": 1193,
+        "status": "ERROR"
+      },
+      {
+        "trace_id": "77015003da7997c4",
+        "span_id": "span-5-1",
+        "parent_span_id": "span-5-0",
+        "timestamp": "2026-01-15T12:41:01+00:00",
+        "service": "airflow-scheduler",
+        "operation": "dependency_call",
+        "duration_ms": 803,
+        "status": "ERROR"
+      }
+    ],
+    "runbook": "Inspect DAG config changes, queued run count, scheduler health, pool slots, and downstream warehouse queue time before clearing or pausing runs.",
+    "ground_truth": {
+      "schema_version": "incidentforge.ground_truth.v1",
+      "incident_id": "ifg-e57ceede8e",
+      "scenario": "airflow-dag-backfill-storm",
+      "service": "revenue-etl",
+      "severity": "SEV2",
+      "root_cause": "The revenue-etl DAG was deployed with catchup enabled and an old start_date, creating a backfill storm that starves current scheduled runs.",
+      "root_cause_terms": [
+        "catchup enabled",
+        "old start_date",
+        "backfill storm",
+        "scheduler queued",
+        "revenue-etl"
+      ],
+      "evidence_terms": [
+        "queued_dag_runs",
+        "catchup_config",
+        "worker_capacity_ok",
+        "Queued DAG runs jump from 2 to 318 after the deployment.",
+        "Scheduler logs show catchup=True with start_date=2025-01-01.",
+        "Workers have spare slots, so worker capacity is not the primary limiter."
+      ],
+      "remediation_terms": [
+        "disable catchup",
+        "reset start_date",
+        "clear queued backfills",
+        "pause dag",
+        "scheduler guardrail"
+      ],
+      "red_herring_terms": [
+        "snowflake queue",
+        "warehouse queue",
+        "dbt warning",
+        "dbt model"
+      ],
+      "impact": "Revenue freshness SLA misses by 47 minutes for the EU warehouse.",
+      "expected_signals": [
+        {
+          "name": "queued_dag_runs",
+          "source": "metrics",
+          "query": "max(airflow_dagrun_queued{dag_id=\"revenue-etl\"})",
+          "expected": "Queued DAG runs jump from 2 to 318 after the deployment.",
+          "weight": 1.0
+        },
+        {
+          "name": "catchup_config",
+          "source": "logs",
+          "query": "dag_id=\"revenue-etl\" \"catchup=True\"",
+          "expected": "Scheduler logs show catchup=True with start_date=2025-01-01.",
+          "weight": 1.0
+        },
+        {
+          "name": "worker_capacity_ok",
+          "source": "metrics",
+          "query": "avg(celery_worker_concurrency_used{queue=\"etl\"})",
+          "expected": "Workers have spare slots, so worker capacity is not the primary limiter.",
+          "weight": 1.0
+        }
+      ],
+      "red_herrings": [
+        {
+          "clue": "Snowflake warehouse queue time briefly increased.",
+          "reason": "Warehouse queueing starts after the Airflow backlog and is downstream impact.",
+          "penalty_terms": [
+            "snowflake queue",
+            "warehouse queue"
+          ],
+          "weight": 1.0
+        },
+        {
+          "clue": "A dbt model emitted warnings.",
+          "reason": "The warnings are non-fatal and appear in successful historical runs too.",
+          "penalty_terms": [
+            "dbt warning",
+            "dbt model"
+          ],
+          "weight": 1.0
+        }
+      ]
+    },
+    "examples": {
+      "strong": "The root cause is The revenue-etl DAG was deployed with catchup enabled and an old start_date, creating a backfill storm that starves current scheduled runs. The affected service is revenue-etl. Evidence: queued_dag_runs \u2014 Queued DAG runs jump from 2 to 318 after the deployment. Also, catchup_config \u2014 Scheduler logs show catchup=True with start_date=2025-01-01. Finally, worker_capacity_ok \u2014 Workers have spare slots, so worker capacity is not the primary limiter. Remediation: disable catchup, reset start_date, and clear queued backfills.",
+      "fooled": "The likely cause is snowflake queue and dbt model. The clue was: Snowflake warehouse queue time briefly increased. We should roll back the most recent unrelated change and keep monitoring."
+    }
+  },
+  {
+    "definition": {
+      "slug": "redis-memory-fragmentation",
+      "title": "Redis Memory Fragmentation Spiral",
+      "summary": "Session reads intermittently fail because Redis memory fragmentation climbs after a burst of large temporary keys.",
+      "severity": "SEV2",
+      "service": "session-cache",
+      "root_cause": "A burst of oversized preview-session keys caused Redis memory fragmentation and eviction pressure, leading to session cache misses.",
+      "root_cause_terms": [
+        "redis memory fragmentation",
+        "oversized keys",
+        "eviction pressure",
+        "session cache",
+        "preview-session"
+      ],
+      "impact": "Authenticated users see intermittent logout loops for 7 percent of requests.",
+      "signals": [
+        {
+          "name": "fragmentation_ratio",
+          "source": "metrics",
+          "query": "max(redis_mem_fragmentation_ratio{cluster=\"session-cache\"})",
+          "expected": "Fragmentation ratio climbs from 1.2 to 2.8 within twelve minutes.",
+          "weight": 1.0
+        },
+        {
+          "name": "evicted_keys",
+          "source": "metrics",
+          "query": "sum(rate(redis_evicted_keys_total{cluster=\"session-cache\"}[5m]))",
+          "expected": "Evictions begin immediately after preview-session key volume rises.",
+          "weight": 1.0
+        },
+        {
+          "name": "large_key_logs",
+          "source": "logs",
+          "query": "service=\"profile-preview\" \"preview-session\" \"payload_bytes\"",
+          "expected": "Profile preview writes payloads larger than the configured 64 KB budget.",
+          "weight": 1.0
+        }
+      ],
+      "red_herrings": [
+        {
+          "clue": "A mobile app release increased login traffic.",
+          "reason": "Login traffic increased only 3 percent and cannot explain the eviction slope.",
+          "penalty_terms": [
+            "mobile release",
+            "login traffic"
+          ],
+          "weight": 1.0
+        },
+        {
+          "clue": "TLS handshakes had a small latency bump.",
+          "reason": "Handshake latency is after the cache miss and is not causal.",
+          "penalty_terms": [
+            "tls handshake",
+            "certificate"
+          ],
+          "weight": 1.0
+        }
+      ],
+      "remediation_terms": [
+        "delete oversized keys",
+        "restart redis",
+        "cap payload size",
+        "ttl preview-session",
+        "memory fragmentation alert"
+      ],
+      "timeline": [
+        {
+          "minute": 0,
+          "service": "profile-preview",
+          "event": "large preview-session keys written",
+          "evidence": "large_key_logs"
+        },
+        {
+          "minute": 7,
+          "service": "redis",
+          "event": "fragmentation ratio exceeds 2.0",
+          "evidence": "fragmentation_ratio"
+        },
+        {
+          "minute": 10,
+          "service": "redis",
+          "event": "evicted keys rise",
+          "evidence": "evicted_keys"
+        },
+        {
+          "minute": 15,
+          "service": "pagerduty",
+          "event": "SEV2 alert triggered",
+          "evidence": "logout loops"
+        }
+      ],
+      "runbook": "Inspect Redis memory, fragmentation, key cardinality, largest keys, eviction counters, and recent writers before restarting or deleting keys.",
+      "tags": [
+        "redis",
+        "cache",
+        "memory",
+        "sessions"
+      ]
+    },
+    "manifest": {
+      "schema_version": "incidentforge.bundle.v1",
+      "incident_id": "ifg-6b4aa9bcf8",
+      "scenario": "redis-memory-fragmentation",
+      "title": "Redis Memory Fragmentation Spiral",
+      "seed": 11,
+      "started_at": "2026-01-15T11:55:00+00:00",
+      "files": {
+        "alert": "alert.json",
+        "metrics": "metrics.csv",
+        "logs": "logs.jsonl",
+        "traces": "traces.json",
+        "runbook": "runbook.md",
+        "ground_truth": "ground_truth.json",
+        "ground_truth_yaml": "ground_truth.yaml"
+      }
+    },
+    "alert": {
+      "schema_version": "incidentforge.alert.v1",
+      "incident_id": "ifg-6b4aa9bcf8",
+      "title": "Redis Memory Fragmentation Spiral",
+      "severity": "SEV2",
+      "service": "session-cache",
+      "summary": "Session reads intermittently fail because Redis memory fragmentation climbs after a burst of large temporary keys.",
+      "started_at": "2026-01-15T11:55:00+00:00",
+      "labels": {
+        "team": "platform",
+        "environment": "production",
+        "scenario": "redis-memory-fragmentation",
+        "source": "incidentforge"
+      },
+      "links": {
+        "runbook": "runbook.md",
+        "metrics": "metrics.csv",
+        "logs": "logs.jsonl",
+        "traces": "traces.json"
+      }
+    },
+    "metrics": [
+      {
+        "timestamp": "2026-01-15T11:55:00+00:00",
+        "metric": "service_error_rate",
+        "service": "session-cache",
+        "value": 0.01,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:55:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "session-cache",
+        "value": 180,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:55:00+00:00",
+        "metric": "fragmentation_ratio",
+        "service": "session-cache",
+        "value": 11.4,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:55:00+00:00",
+        "metric": "evicted_keys",
+        "service": "session-cache",
+        "value": 17.57,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:55:00+00:00",
+        "metric": "large_key_logs",
+        "service": "session-cache",
+        "value": 20.55,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:57:00+00:00",
+        "metric": "service_error_rate",
+        "service": "session-cache",
+        "value": 0.0226,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:57:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "session-cache",
+        "value": 1037,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:57:00+00:00",
+        "metric": "fragmentation_ratio",
+        "service": "session-cache",
+        "value": 32.13,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:57:00+00:00",
+        "metric": "evicted_keys",
+        "service": "session-cache",
+        "value": 39.34,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:57:00+00:00",
+        "metric": "large_key_logs",
+        "service": "session-cache",
+        "value": 57.02,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:59:00+00:00",
+        "metric": "service_error_rate",
+        "service": "session-cache",
+        "value": 0.0396,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:59:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "session-cache",
+        "value": 2025,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T11:59:00+00:00",
+        "metric": "fragmentation_ratio",
+        "service": "session-cache",
+        "value": 50.38,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:59:00+00:00",
+        "metric": "evicted_keys",
+        "service": "session-cache",
+        "value": 82.89,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T11:59:00+00:00",
+        "metric": "large_key_logs",
+        "service": "session-cache",
+        "value": 144.47,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:01:00+00:00",
+        "metric": "service_error_rate",
+        "service": "session-cache",
+        "value": 0.0509,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:01:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "session-cache",
+        "value": 2731,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:01:00+00:00",
+        "metric": "fragmentation_ratio",
+        "service": "session-cache",
+        "value": 42.87,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:01:00+00:00",
+        "metric": "evicted_keys",
+        "service": "session-cache",
+        "value": 81.18,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:01:00+00:00",
+        "metric": "large_key_logs",
+        "service": "session-cache",
+        "value": 139.64,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:03:00+00:00",
+        "metric": "service_error_rate",
+        "service": "session-cache",
+        "value": 0.063,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:03:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "session-cache",
+        "value": 4217,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:03:00+00:00",
+        "metric": "fragmentation_ratio",
+        "service": "session-cache",
+        "value": 80.48,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:03:00+00:00",
+        "metric": "evicted_keys",
+        "service": "session-cache",
+        "value": 172.53,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:03:00+00:00",
+        "metric": "large_key_logs",
+        "service": "session-cache",
+        "value": 239.7,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:05:00+00:00",
+        "metric": "service_error_rate",
+        "service": "session-cache",
+        "value": 0.0648,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:05:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "session-cache",
+        "value": 1265,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:05:00+00:00",
+        "metric": "fragmentation_ratio",
+        "service": "session-cache",
+        "value": 112.75,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:05:00+00:00",
+        "metric": "evicted_keys",
+        "service": "session-cache",
+        "value": 219.58,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:05:00+00:00",
+        "metric": "large_key_logs",
+        "service": "session-cache",
+        "value": 304.24,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:07:00+00:00",
+        "metric": "service_error_rate",
+        "service": "session-cache",
+        "value": 0.1003,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:07:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "session-cache",
+        "value": 5803,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:07:00+00:00",
+        "metric": "fragmentation_ratio",
+        "service": "session-cache",
+        "value": 94.95,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:07:00+00:00",
+        "metric": "evicted_keys",
+        "service": "session-cache",
+        "value": 180.04,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:07:00+00:00",
+        "metric": "large_key_logs",
+        "service": "session-cache",
+        "value": 206.96,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:09:00+00:00",
+        "metric": "service_error_rate",
+        "service": "session-cache",
+        "value": 0.1115,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:09:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "session-cache",
+        "value": 4537,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:09:00+00:00",
+        "metric": "fragmentation_ratio",
+        "service": "session-cache",
+        "value": 93.91,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:09:00+00:00",
+        "metric": "evicted_keys",
+        "service": "session-cache",
+        "value": 240.95,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:09:00+00:00",
+        "metric": "large_key_logs",
+        "service": "session-cache",
+        "value": 237.79,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:11:00+00:00",
+        "metric": "service_error_rate",
+        "service": "session-cache",
+        "value": 0.08,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:11:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "session-cache",
+        "value": 3598,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:11:00+00:00",
+        "metric": "fragmentation_ratio",
+        "service": "session-cache",
+        "value": 97.41,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:11:00+00:00",
+        "metric": "evicted_keys",
+        "service": "session-cache",
+        "value": 356.19,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:11:00+00:00",
+        "metric": "large_key_logs",
+        "service": "session-cache",
+        "value": 288.7,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:13:00+00:00",
+        "metric": "service_error_rate",
+        "service": "session-cache",
+        "value": 0.0919,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:13:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "session-cache",
+        "value": 7408,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:13:00+00:00",
+        "metric": "fragmentation_ratio",
+        "service": "session-cache",
+        "value": 125.01,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:13:00+00:00",
+        "metric": "evicted_keys",
+        "service": "session-cache",
+        "value": 254.0,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:13:00+00:00",
+        "metric": "large_key_logs",
+        "service": "session-cache",
+        "value": 418.27,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:15:00+00:00",
+        "metric": "service_error_rate",
+        "service": "session-cache",
+        "value": 0.0871,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:15:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "session-cache",
+        "value": 3898,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:15:00+00:00",
+        "metric": "fragmentation_ratio",
+        "service": "session-cache",
+        "value": 180.3,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:15:00+00:00",
+        "metric": "evicted_keys",
+        "service": "session-cache",
+        "value": 190.39,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:15:00+00:00",
+        "metric": "large_key_logs",
+        "service": "session-cache",
+        "value": 446.53,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:17:00+00:00",
+        "metric": "service_error_rate",
+        "service": "session-cache",
+        "value": 0.1136,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:17:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "session-cache",
+        "value": 5545,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:17:00+00:00",
+        "metric": "fragmentation_ratio",
+        "service": "session-cache",
+        "value": 155.57,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:17:00+00:00",
+        "metric": "evicted_keys",
+        "service": "session-cache",
+        "value": 363.31,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:17:00+00:00",
+        "metric": "large_key_logs",
+        "service": "session-cache",
+        "value": 420.93,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:19:00+00:00",
+        "metric": "service_error_rate",
+        "service": "session-cache",
+        "value": 0.087,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:19:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "session-cache",
+        "value": 5326,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:19:00+00:00",
+        "metric": "fragmentation_ratio",
+        "service": "session-cache",
+        "value": 117.0,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:19:00+00:00",
+        "metric": "evicted_keys",
+        "service": "session-cache",
+        "value": 325.91,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:19:00+00:00",
+        "metric": "large_key_logs",
+        "service": "session-cache",
+        "value": 266.63,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:21:00+00:00",
+        "metric": "service_error_rate",
+        "service": "session-cache",
+        "value": 0.1037,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:21:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "session-cache",
+        "value": 8879,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:21:00+00:00",
+        "metric": "fragmentation_ratio",
+        "service": "session-cache",
+        "value": 168.93,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:21:00+00:00",
+        "metric": "evicted_keys",
+        "service": "session-cache",
+        "value": 199.13,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:21:00+00:00",
+        "metric": "large_key_logs",
+        "service": "session-cache",
+        "value": 314.64,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:23:00+00:00",
+        "metric": "service_error_rate",
+        "service": "session-cache",
+        "value": 0.0955,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:23:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "session-cache",
+        "value": 8209,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:23:00+00:00",
+        "metric": "fragmentation_ratio",
+        "service": "session-cache",
+        "value": 168.99,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:23:00+00:00",
+        "metric": "evicted_keys",
+        "service": "session-cache",
+        "value": 250.16,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:23:00+00:00",
+        "metric": "large_key_logs",
+        "service": "session-cache",
+        "value": 287.27,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:25:00+00:00",
+        "metric": "service_error_rate",
+        "service": "session-cache",
+        "value": 0.115,
+        "unit": "ratio",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:25:00+00:00",
+        "metric": "service_p95_latency_ms",
+        "service": "session-cache",
+        "value": 3870,
+        "unit": "milliseconds",
+        "signal": "impact"
+      },
+      {
+        "timestamp": "2026-01-15T12:25:00+00:00",
+        "metric": "fragmentation_ratio",
+        "service": "session-cache",
+        "value": 92.8,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:25:00+00:00",
+        "metric": "evicted_keys",
+        "service": "session-cache",
+        "value": 270.87,
+        "unit": "score",
+        "signal": "expected_evidence"
+      },
+      {
+        "timestamp": "2026-01-15T12:25:00+00:00",
+        "metric": "large_key_logs",
+        "service": "session-cache",
+        "value": 310.88,
+        "unit": "score",
+        "signal": "expected_evidence"
+      }
+    ],
+    "logs": [
+      {
+        "timestamp": "2026-01-15T11:55:00+00:00",
+        "level": "WARN",
+        "service": "profile-preview",
+        "message": "large preview-session keys written",
+        "evidence": "large_key_logs",
+        "trace_id": "44be5af571a4c715"
+      },
+      {
+        "timestamp": "2026-01-15T11:56:00+00:00",
+        "level": "WARN",
+        "service": "edge-router",
+        "message": "request sample accepted"
+      },
+      {
+        "timestamp": "2026-01-15T11:57:00+00:00",
+        "level": "INFO",
+        "service": "change-feed",
+        "message": "A mobile app release increased login traffic.",
+        "why_not_root_cause": "Login traffic increased only 3 percent and cannot explain the eviction slope."
+      },
+      {
+        "timestamp": "2026-01-15T11:57:00+00:00",
+        "level": "INFO",
+        "service": "edge-router",
+        "message": "rate limiter budget healthy"
+      },
+      {
+        "timestamp": "2026-01-15T11:59:00+00:00",
+        "level": "INFO",
+        "service": "edge-router",
+        "message": "health check passed"
+      },
+      {
+        "timestamp": "2026-01-15T12:00:00+00:00",
+        "level": "WARN",
+        "service": "session-cache",
+        "message": "background refresh completed"
+      },
+      {
+        "timestamp": "2026-01-15T12:01:00+00:00",
+        "level": "INFO",
+        "service": "change-feed",
+        "message": "TLS handshakes had a small latency bump.",
+        "why_not_root_cause": "Handshake latency is after the cache miss and is not causal."
+      },
+      {
+        "timestamp": "2026-01-15T12:02:00+00:00",
+        "level": "WARN",
+        "service": "redis",
+        "message": "fragmentation ratio exceeds 2.0",
+        "evidence": "fragmentation_ratio",
+        "trace_id": "6ecf7ebfe7c0333d"
+      },
+      {
+        "timestamp": "2026-01-15T12:03:00+00:00",
+        "level": "INFO",
+        "service": "session-cache",
+        "message": "health check passed"
+      },
+      {
+        "timestamp": "2026-01-15T12:05:00+00:00",
+        "level": "ERROR",
+        "service": "redis",
+        "message": "evicted keys rise",
+        "evidence": "evicted_keys",
+        "trace_id": "245dc39081f4aeca"
+      },
+      {
+        "timestamp": "2026-01-15T12:05:00+00:00",
+        "level": "ERROR",
+        "service": "session-cache",
+        "message": "fragmentation_ratio: Fragmentation ratio climbs from 1.2 to 2.8 within twelve minutes.",
+        "query_hint": "max(redis_mem_fragmentation_ratio{cluster=\"session-cache\"})",
+        "source": "metrics"
+      },
+      {
+        "timestamp": "2026-01-15T12:07:00+00:00",
+        "level": "ERROR",
+        "service": "session-cache",
+        "message": "large_key_logs: Profile preview writes payloads larger than the configured 64 KB budget.",
+        "query_hint": "service=\"profile-preview\" \"preview-session\" \"payload_bytes\"",
+        "source": "logs"
+      },
+      {
+        "timestamp": "2026-01-15T12:08:00+00:00",
+        "level": "INFO",
+        "service": "session-cache",
+        "message": "health check passed"
+      },
+      {
+        "timestamp": "2026-01-15T12:08:00+00:00",
+        "level": "WARN",
+        "service": "edge-router",
+        "message": "background refresh completed"
+      },
+      {
+        "timestamp": "2026-01-15T12:10:00+00:00",
+        "level": "ERROR",
+        "service": "pagerduty",
+        "message": "SEV2 alert triggered",
+        "evidence": "logout loops",
+        "trace_id": "ecacd683c6333cf5"
+      },
+      {
+        "timestamp": "2026-01-15T12:11:00+00:00",
+        "level": "ERROR",
+        "service": "session-cache",
+        "message": "evicted_keys: Evictions begin immediately after preview-session key volume rises.",
+        "query_hint": "sum(rate(redis_evicted_keys_total{cluster=\"session-cache\"}[5m]))",
+        "source": "metrics"
+      },
+      {
+        "timestamp": "2026-01-15T12:11:00+00:00",
+        "level": "INFO",
+        "service": "worker-pool",
+        "message": "health check passed"
+      },
+      {
+        "timestamp": "2026-01-15T12:16:00+00:00",
+        "level": "INFO",
+        "service": "edge-router",
+        "message": "health check passed"
+      },
+      {
+        "timestamp": "2026-01-15T12:18:00+00:00",
+        "level": "INFO",
+        "service": "session-cache",
+        "message": "request sample accepted"
+      },
+      {
+        "timestamp": "2026-01-15T12:18:00+00:00",
+        "level": "WARN",
+        "service": "edge-router",
+        "message": "background refresh completed"
+      },
+      {
+        "timestamp": "2026-01-15T12:24:00+00:00",
+        "level": "INFO",
+        "service": "worker-pool",
+        "message": "request sample accepted"
+      }
+    ],
+    "traces": [
+      {
+        "trace_id": "44be5af571a4c715",
+        "span_id": "span-0-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T11:55:00+00:00",
+        "service": "session-cache",
+        "operation": "handle_request",
+        "duration_ms": 247,
+        "status": "OK"
+      },
+      {
+        "trace_id": "44be5af571a4c715",
+        "span_id": "span-0-1",
+        "parent_span_id": "span-0-0",
+        "timestamp": "2026-01-15T11:55:01+00:00",
+        "service": "redis-primary",
+        "operation": "dependency_call",
+        "duration_ms": 109,
+        "status": "OK"
+      },
+      {
+        "trace_id": "fa448cb6fee19abd",
+        "span_id": "span-1-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T11:58:00+00:00",
+        "service": "session-cache",
+        "operation": "handle_request",
+        "duration_ms": 210,
+        "status": "OK"
+      },
+      {
+        "trace_id": "fa448cb6fee19abd",
+        "span_id": "span-1-1",
+        "parent_span_id": "span-1-0",
+        "timestamp": "2026-01-15T11:58:01+00:00",
+        "service": "redis-primary",
+        "operation": "dependency_call",
+        "duration_ms": 110,
+        "status": "OK"
+      },
+      {
+        "trace_id": "033ccdd5ed69a37e",
+        "span_id": "span-2-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T12:01:00+00:00",
+        "service": "session-cache",
+        "operation": "handle_request",
+        "duration_ms": 391,
+        "status": "OK"
+      },
+      {
+        "trace_id": "033ccdd5ed69a37e",
+        "span_id": "span-2-1",
+        "parent_span_id": "span-2-0",
+        "timestamp": "2026-01-15T12:01:01+00:00",
+        "service": "redis-primary",
+        "operation": "dependency_call",
+        "duration_ms": 246,
+        "status": "OK"
+      },
+      {
+        "trace_id": "73afe81b39c66fa1",
+        "span_id": "span-3-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T12:04:00+00:00",
+        "service": "session-cache",
+        "operation": "handle_request",
+        "duration_ms": 1338,
+        "status": "ERROR"
+      },
+      {
+        "trace_id": "73afe81b39c66fa1",
+        "span_id": "span-3-1",
+        "parent_span_id": "span-3-0",
+        "timestamp": "2026-01-15T12:04:01+00:00",
+        "service": "redis-primary",
+        "operation": "dependency_call",
+        "duration_ms": 607,
+        "status": "OK"
+      },
+      {
+        "trace_id": "5605320c796a9426",
+        "span_id": "span-4-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T12:07:00+00:00",
+        "service": "session-cache",
+        "operation": "handle_request",
+        "duration_ms": 1366,
+        "status": "ERROR"
+      },
+      {
+        "trace_id": "5605320c796a9426",
+        "span_id": "span-4-1",
+        "parent_span_id": "span-4-0",
+        "timestamp": "2026-01-15T12:07:01+00:00",
+        "service": "redis-primary",
+        "operation": "dependency_call",
+        "duration_ms": 1024,
+        "status": "ERROR"
+      },
+      {
+        "trace_id": "761b5092a355b686",
+        "span_id": "span-5-0",
+        "parent_span_id": null,
+        "timestamp": "2026-01-15T12:10:00+00:00",
+        "service": "session-cache",
+        "operation": "handle_request",
+        "duration_ms": 2155,
+        "status": "ERROR"
+      },
+      {
+        "trace_id": "761b5092a355b686",
+        "span_id": "span-5-1",
+        "parent_span_id": "span-5-0",
+        "timestamp": "2026-01-15T12:10:01+00:00",
+        "service": "redis-primary",
+        "operation": "dependency_call",
+        "duration_ms": 1428,
+        "status": "ERROR"
+      }
+    ],
+    "runbook": "Inspect Redis memory, fragmentation, key cardinality, largest keys, eviction counters, and recent writers before restarting or deleting keys.",
+    "ground_truth": {
+      "schema_version": "incidentforge.ground_truth.v1",
+      "incident_id": "ifg-6b4aa9bcf8",
+      "scenario": "redis-memory-fragmentation",
+      "service": "session-cache",
+      "severity": "SEV2",
+      "root_cause": "A burst of oversized preview-session keys caused Redis memory fragmentation and eviction pressure, leading to session cache misses.",
+      "root_cause_terms": [
+        "redis memory fragmentation",
+        "oversized keys",
+        "eviction pressure",
+        "session cache",
+        "preview-session"
+      ],
+      "evidence_terms": [
+        "fragmentation_ratio",
+        "evicted_keys",
+        "large_key_logs",
+        "Fragmentation ratio climbs from 1.2 to 2.8 within twelve minutes.",
+        "Evictions begin immediately after preview-session key volume rises.",
+        "Profile preview writes payloads larger than the configured 64 KB budget."
+      ],
+      "remediation_terms": [
+        "delete oversized keys",
+        "restart redis",
+        "cap payload size",
+        "ttl preview-session",
+        "memory fragmentation alert"
+      ],
+      "red_herring_terms": [
+        "mobile release",
+        "login traffic",
+        "tls handshake",
+        "certificate"
+      ],
+      "impact": "Authenticated users see intermittent logout loops for 7 percent of requests.",
+      "expected_signals": [
+        {
+          "name": "fragmentation_ratio",
+          "source": "metrics",
+          "query": "max(redis_mem_fragmentation_ratio{cluster=\"session-cache\"})",
+          "expected": "Fragmentation ratio climbs from 1.2 to 2.8 within twelve minutes.",
+          "weight": 1.0
+        },
+        {
+          "name": "evicted_keys",
+          "source": "metrics",
+          "query": "sum(rate(redis_evicted_keys_total{cluster=\"session-cache\"}[5m]))",
+          "expected": "Evictions begin immediately after preview-session key volume rises.",
+          "weight": 1.0
+        },
+        {
+          "name": "large_key_logs",
+          "source": "logs",
+          "query": "service=\"profile-preview\" \"preview-session\" \"payload_bytes\"",
+          "expected": "Profile preview writes payloads larger than the configured 64 KB budget.",
+          "weight": 1.0
+        }
+      ],
+      "red_herrings": [
+        {
+          "clue": "A mobile app release increased login traffic.",
+          "reason": "Login traffic increased only 3 percent and cannot explain the eviction slope.",
+          "penalty_terms": [
+            "mobile release",
+            "login traffic"
+          ],
+          "weight": 1.0
+        },
+        {
+          "clue": "TLS handshakes had a small latency bump.",
+          "reason": "Handshake latency is after the cache miss and is not causal.",
+          "penalty_terms": [
+            "tls handshake",
+            "certificate"
+          ],
+          "weight": 1.0
+        }
+      ]
+    },
+    "examples": {
+      "strong": "The root cause is A burst of oversized preview-session keys caused Redis memory fragmentation and eviction pressure, leading to session cache misses. The affected service is session-cache. Evidence: fragmentation_ratio \u2014 Fragmentation ratio climbs from 1.2 to 2.8 within twelve minutes. Also, evicted_keys \u2014 Evictions begin immediately after preview-session key volume rises. Finally, large_key_logs \u2014 Profile preview writes payloads larger than the configured 64 KB budget. Remediation: delete oversized keys, restart redis, and cap payload size.",
+      "fooled": "The likely cause is mobile release and certificate. The clue was: A mobile app release increased login traffic. We should roll back the most recent unrelated change and keep monitoring."
+    }
+  }
+]

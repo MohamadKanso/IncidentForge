@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090b0b">
+  <meta name="description" content="Investigate synthetic production incidents and score an RCA live with IncidentForge.">
+  <title>IncidentForge — Live RCA Evaluation Lab</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="IncidentForge home">
+      <span>INCIDENT</span><i>//</i><span>FORGE</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="#lab">Live lab</a>
+      <a href="#engine">Scoring engine</a>
+      <a href="https://github.com/MohamadKanso/IncidentForge" target="_blank" rel="noopener">Source ↗</a>
+    </nav>
+    <span class="live-state"><i></i> deterministic</span>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow"><span>01</span> AI SRE evaluation, without the theatre</p>
+        <h1>Can your agent find<br><em>the real failure?</em></h1>
+        <p class="hero-lede">Investigate a production incident, write the RCA, and watch a transparent evaluator measure root cause, evidence, remediation, and red-herring resistance.</p>
+        <div class="hero-actions">
+          <a class="primary-action" href="#lab">Enter live incident <b>↘</b></a>
+          <span><i>NO LLM JUDGE</i> Every point is inspectable.</span>
+        </div>
+      </div>
+
+      <div class="hero-machine" aria-hidden="true">
+        <div class="machine-grid"></div>
+        <div class="machine-core"><span>SEV</span><strong>2</strong><i>ACTIVE</i></div>
+        <div class="signal signal-a"><span>LOGS</span><b>17</b></div>
+        <div class="signal signal-b"><span>TRACES</span><b>12</b></div>
+        <div class="signal signal-c"><span>METRICS</span><b>80</b></div>
+        <div class="signal signal-d"><span>TRUTH</span><b>01</b></div>
+        <div class="scan-line"></div>
+      </div>
+    </section>
+
+    <section class="principles" aria-label="IncidentForge principles">
+      <article><strong>04</strong><span>deterministic scenarios</span></article>
+      <article><strong>05</strong><span>scoring dimensions</span></article>
+      <article><strong>100%</strong><span>browser-side evaluation</span></article>
+      <article><strong>0</strong><span>hidden judge prompts</span></article>
+    </section>
+
+    <section class="lab-section" id="lab">
+      <div class="section-intro">
+        <p class="eyebrow"><span>02</span> Live investigation chamber</p>
+        <h2>Follow the evidence.<br><em>Then prove your diagnosis.</em></h2>
+        <p>Choose an incident. Inspect the alert, metrics, logs, traces, and runbook. Write an RCA—or load an example—and run the exact scoring logic used by the Python package.</p>
+      </div>
+
+      <div class="scenario-picker" id="scenario-picker" role="tablist" aria-label="Synthetic incident scenarios"></div>
+
+      <div class="incident-shell">
+        <div class="shell-topbar">
+          <div><i></i><span id="incident-id">IFG-LOADING</span></div>
+          <div class="severity" id="severity">SEV—</div>
+          <div><span>STATUS</span><strong>INVESTIGATING</strong></div>
+        </div>
+
+        <section class="incident-brief" aria-live="polite">
+          <div>
+            <span id="incident-service">SERVICE</span>
+            <h3 id="incident-title">Loading incident bundle…</h3>
+          </div>
+          <p id="incident-summary">Preparing deterministic evidence.</p>
+          <div class="impact"><span>USER IMPACT</span><strong id="incident-impact">—</strong></div>
+        </section>
+
+        <div class="workspace">
+          <section class="evidence-panel" aria-label="Incident evidence explorer">
+            <div class="panel-head">
+              <div><span>EVIDENCE ARRAY</span><strong id="evidence-count">— ITEMS</strong></div>
+              <span class="signal-pulse"><i></i> LIVE FIXTURE</span>
+            </div>
+            <div class="evidence-tabs" role="tablist" aria-label="Evidence types">
+              <button type="button" role="tab" aria-selected="true" data-tab="alert">Alert</button>
+              <button type="button" role="tab" aria-selected="false" data-tab="metrics">Metrics</button>
+              <button type="button" role="tab" aria-selected="false" data-tab="logs">Logs</button>
+              <button type="button" role="tab" aria-selected="false" data-tab="traces">Traces</button>
+              <button type="button" role="tab" aria-selected="false" data-tab="runbook">Runbook</button>
+            </div>
+            <div class="evidence-view" id="evidence-view" tabindex="0"></div>
+          </section>
+
+          <section class="rca-panel" aria-label="RCA evaluation panel">
+            <div class="panel-head">
+              <div><span>CANDIDATE RCA</span><strong>WRITE OR LOAD A REPORT</strong></div>
+              <span id="draft-count">0 WORDS</span>
+            </div>
+            <label class="sr-only" for="rca-input">Candidate root-cause analysis</label>
+            <textarea id="rca-input" spellcheck="true" placeholder="State the root cause, cite the evidence, name the affected service, and propose remediation…"></textarea>
+            <div class="example-controls">
+              <button type="button" id="load-strong">Load evidence-led RCA</button>
+              <button type="button" id="load-fooled">Load red-herring RCA</button>
+              <button type="button" id="clear-rca">Clear</button>
+            </div>
+            <button class="score-button" type="button" id="score-button">
+              <span><small>RUN TRANSPARENT EVALUATOR</small><strong>Score this RCA</strong></span>
+              <b>⌘ ↵</b>
+            </button>
+            <p class="score-status" id="score-status" role="status">No report scored yet.</p>
+          </section>
+        </div>
+
+        <section class="score-deck" id="score-deck" aria-live="polite">
+          <div class="overall-score">
+            <span>OVERALL</span>
+            <strong id="overall-value">—</strong>
+            <small id="score-verdict">AWAITING RCA</small>
+          </div>
+          <div class="score-bars" id="score-bars">
+            <div data-score="root_cause"><span>Root cause <i>42%</i></span><b><i></i></b><strong>—</strong></div>
+            <div data-score="evidence"><span>Evidence <i>34%</i></span><b><i></i></b><strong>—</strong></div>
+            <div data-score="remediation"><span>Remediation <i>14%</i></span><b><i></i></b><strong>—</strong></div>
+            <div data-score="service_identification"><span>Service ID <i>10%</i></span><b><i></i></b><strong>—</strong></div>
+            <div data-score="red_herring_resistance"><span>Red-herring resistance</span><b><i></i></b><strong>—</strong></div>
+          </div>
+          <div class="score-notes">
+            <article><span>MISSING EVIDENCE</span><div id="missing-evidence"><i>Score a report to inspect gaps.</i></div></article>
+            <article><span>RED HERRINGS TRIGGERED</span><div id="red-herrings"><i>Score a report to inspect penalties.</i></div></article>
+          </div>
+          <details class="truth-panel">
+            <summary>Reveal the ground truth <span>only after investigating ↘</span></summary>
+            <div><span>ACTUAL FAILURE</span><p id="ground-truth">—</p></div>
+          </details>
+        </section>
+      </div>
+    </section>
+
+    <section class="engine-section" id="engine">
+      <div class="section-intro compact">
+        <p class="eyebrow"><span>03</span> The scoring engine</p>
+        <h2>Not a vibe check.<br><em>A measurable contract.</em></h2>
+      </div>
+      <div class="engine-grid">
+        <article><span>01</span><h3>Generate</h3><p>Every scenario creates repeatable alerts, metrics, logs, traces, runbooks, noise, and hidden truth from a fixed seed.</p></article>
+        <article><span>02</span><h3>Investigate</h3><p>The candidate receives the same evidence an operator would inspect. Misleading but plausible clues are included on purpose.</p></article>
+        <article><span>03</span><h3>Score</h3><p>Terms and evidence signals map to explicit weights. Blaming a red herring removes points. No opaque evaluator decides the outcome.</p></article>
+        <article><span>04</span><h3>Improve</h3><p>Missing signals and remediation terms turn a single score into a useful explanation of what the RCA failed to prove.</p></article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div><strong>INCIDENT//FORGE</strong><p>Synthetic incidents. Inspectable evaluation.</p></div>
+    <p>All data in this lab is generated and contains no real production information.</p>
+    <a href="#top">Back to top ↑</a>
+  </footer>
+</body>
+</html>
